@@ -60,7 +60,6 @@ export default function Navbar() {
         const x = rect.left + rect.width / 2;
         const y = rect.top + rect.height / 2;
         
-        // Get element behind navbar
         navbar.style.pointerEvents = 'none';
         const elementBehind = document.elementFromPoint(x, y);
         navbar.style.pointerEvents = 'auto';
@@ -70,7 +69,6 @@ export default function Navbar() {
           const rgb = bgColor.match(/\d+/g);
           
           if (rgb) {
-            // Calculate luminance
             const luminance = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
             setIsDark(luminance < 0.5);
           }
@@ -110,7 +108,7 @@ export default function Navbar() {
               <a 
                 key={item} 
                 href={`#${item.toLowerCase()}`} 
-                className={`text-sm font-medium transition-colors duration-300 ${textColor} ${hoverColor}`}
+                className={`text-sm font-bold transition-colors duration-300 ${textColor} ${hoverColor}`}
               >
                 {item}
               </a>

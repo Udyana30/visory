@@ -26,14 +26,22 @@ export default function TextToSpeechPage() {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start ml-6 mt-4">
-      <div className="lg:col-span-2">
-        <TtsForm isLoading={isLoading} onSubmit={handleGenerate} />
-      </div>
-      <div className="lg:col-span-1">
-        <ResultDisplay isLoading={isLoading} error={error} result={result} />
-      </div>
+    <div className="p-8">
+      <header className="mb-2 ml-8">
+        <h1 className="text-3xl font-bold text-gray-900">Text to Speech</h1>
+        <p className="mt-2 text-md text-gray-600">
+          Create realistic and natural-sounding voiceovers from your text using AI.
+        </p>
+      </header>
+
+      <main className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start ml-6 mt-4">
+        <div className="lg:col-span-2">
+          <TtsForm isLoading={isLoading} onSubmit={handleGenerate} />
+        </div>
+        <div className="lg:col-span-1">
+          <ResultDisplay isLoading={isLoading} error={error} result={result} />
+        </div>
+      </main>
     </div>
   );
 }
-

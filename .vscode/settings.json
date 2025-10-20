@@ -1,0 +1,15 @@
+{
+    "workbench.iconTheme": "material-icon-theme",
+    "material-icon-theme.folders.associations": {
+      "sections": "template",
+      "capabilities": "middleware",
+      "login": "keys",
+      "register": "secure",
+      "image-generator": "images",
+      "speech-to-text": "audio",
+      "text-to-speech": "audio",
+      "avatar-generator": "plastic",
+      "inspiration": "pdm"
+    }
+  }
+  
