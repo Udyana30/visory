@@ -4,7 +4,7 @@ import { Search, Bell } from 'lucide-react';
 import HeroSection from './sections/HeroSection';
 import ToolsGrid from './sections/ToolsGrid';
 import RecentProjects from './sections/RecentProjects';
-import ProfileDropdown from './sections/ProfileDropdown';
+import ProfileDropdown from '../../../components/ui/ProfileDropdown';
 
 export default function HomePage() {
   return (

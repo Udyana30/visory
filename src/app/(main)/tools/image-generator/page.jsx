@@ -1,80 +1,68 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useCallback } from "react";
 import { Bell } from 'lucide-react';
-import ProfileDropdown from './components/ProfileDropdown';
-import StepIndicator from './components/StepIndicator';
-import ProjectSetup from './sections/ProjectSetup';
-import { useProjectSetup } from './hooks/useProjectSetup';
+import ComicSetup from "./sections/ComicSetup";
+import ProfileDropdown from "@/components/ui/ProfileDropdown";
+import ComicStorySelection from "./sections/ComicStorySelection";
+import ComicFinalization from "./sections/ComicFinalization";
+import useComicState from "./hooks/useComicState";
 
-const STEPS = [
-  { id: 'project-setup', label: 'Project Setup', description: 'Configure your project' },
-  { id: 'story-modification', label: 'Story Modification', description: 'Edit your story' },
-  { id: 'generate-image', label: 'Generate Image', description: 'Create images' },
-];
+export default function ComicGeneratorPage() {
+  const { state, updateState, resetState } = useComicState();
 
-export default function ImageGeneratorPage() {
-  const [currentStep, setCurrentStep] = useState(0);
-  const { formData, errors, updateField, validateForm } = useProjectSetup();
+  const handleSetupComplete = useCallback((data) => {
+    updateState({
+      comicData: data,
+      currentStep: 2,
+    });
+  }, [updateState]);
 
-  const handleNextStep = () => {
-    if (currentStep === 0 && !validateForm()) {
-      return;
-    }
+  const handleStorySelected = useCallback((story, storyIndex, generatedData) => {
+    const updatedComicData = {
+      ...state.comicData,
+      generated_images: generatedData.generated_images || [],
+      image_references: generatedData.image_references || [],
+      status: generatedData.status,
+    };
+    
+    updateState({
+      selectedStory: story,
+      selectedStoryIndex: storyIndex,
+      comicData: updatedComicData,
+      generatedImages: generatedData.generated_images || [],
+      updatedStory: story,
+      currentStep: 3,
+    });
+  }, [updateState, state.comicData]);
 
-    if (currentStep < STEPS.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
+  const handleBackToSetup = useCallback(() => {
+    updateState({ currentStep: 1 });
+  }, [updateState]);
 
-  const handlePreviousStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
+  const handleBackToSelection = useCallback(() => {
+    updateState({ 
+      currentStep: 2,
+    });
+  }, [updateState]);
 
-  const handleStepClick = (stepIndex) => {
-    if (stepIndex < currentStep) {
-      setCurrentStep(stepIndex);
-    }
-  };
+  const handleFinalizationComplete = useCallback(() => {
+    resetState();
+  }, [resetState]);
 
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 0:
-        return (
-          <ProjectSetup
-            formData={formData}
-            errors={errors}
-            onUpdate={updateField}
-          />
-        );
-      case 1:
-        return (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Story Modification</h2>
-            <p className="text-gray-600">Coming soon...</p>
-          </div>
-        );
-      case 2:
-        return (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Generate Image</h2>
-            <p className="text-gray-600">Coming soon...</p>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
+  const handleFormChange = useCallback((formData) => {
+    updateState({ formData });
+  }, [updateState]);
+
+  const handleStateChange = useCallback((updates) => {
+    updateState(updates);
+  }, [updateState]);
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] p-6">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#f5f5f5] border-b border-gray-200">
-        <div className="px-8 py-4">
-          {/* Desktop Layout */}
-          <div className="hidden md:block">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Desktop Layout */}
+          <div className="hidden md:block mb-6">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-4 flex-1">
                 <h1 className="text-3xl font-bold text-gray-900 whitespace-nowrap">
@@ -96,7 +84,7 @@ export default function ImageGeneratorPage() {
           </div>
 
           {/* Mobile Layout */}
-          <div className="md:hidden">
+          <div className="md:hidden mb-6">
             <div className="flex items-center justify-between mb-3">
               <h1 className="text-2xl font-bold text-gray-900">
                 Image Generator
@@ -112,60 +100,71 @@ export default function ImageGeneratorPage() {
               Turn your ideas into visuals. From lifelike scenes to creative comic art, make anything you imagine.
             </p>
           </div>
-        </div>
-      </header>
 
-      {/* Step Indicator */}
-      <div className="bg-white border-b border-gray-200 px-8 py-6">
-        <StepIndicator
-          steps={STEPS}
-          currentStep={currentStep}
-          onStepClick={handleStepClick}
-        />
-      </div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {state.currentStep === 1 && "Project Setup"}
+                {state.currentStep === 2 && "Story Selection"}
+                {state.currentStep === 3 && "Finalization"}
+              </h2>
+            </div>
 
-      {/* Main Content */}
-      <main className="px-8 py-8">
-        {/* Step Content Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
-          {renderStepContent()}
-        </div>
-
-        {/* Navigation Buttons */}
-        <div className="flex items-center justify-between gap-4 mt-8">
-          <button
-            onClick={handlePreviousStep}
-            disabled={currentStep === 0}
-            className={`
-              px-10 py-3 rounded-lg font-medium transition-all
-              ${currentStep === 0
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-white border-2 border-gray-300 text-gray-900 hover:bg-gray-50 hover:border-gray-400'
-              }
-            `}
-          >
-            Previous
-          </button>
-
-          <div className="text-sm text-gray-600 font-medium">
-            Step {currentStep + 1} of {STEPS.length}
+            <div className="flex items-center space-x-4">
+              <div
+                className={`flex-1 h-2 rounded-full ${
+                  state.currentStep >= 1 ? "bg-blue-600" : "bg-gray-200"
+                }`}
+              />
+              <div
+                className={`flex-1 h-2 rounded-full ${
+                  state.currentStep >= 2 ? "bg-blue-600" : "bg-gray-200"
+                }`}
+              />
+              <div
+                className={`flex-1 h-2 rounded-full ${
+                  state.currentStep >= 3 ? "bg-blue-600" : "bg-gray-200"
+                }`}
+              />
+            </div>
           </div>
 
-          <button
-            onClick={handleNextStep}
-            disabled={currentStep === STEPS.length - 1}
-            className={`
-              px-6 py-3 rounded-lg font-medium transition-all
-              ${currentStep === STEPS.length - 1
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-              }
-            `}
-          >
-            {currentStep === STEPS.length - 1 ? 'Complete' : 'Next'}
-          </button>
+          {state.currentStep === 1 && (
+            <ComicSetup
+              initialData={state.formData}
+              onComplete={handleSetupComplete}
+              onFormChange={handleFormChange}
+            />
+          )}
+
+          {state.currentStep === 2 && state.comicData && (
+            <ComicStorySelection
+              key="story-selection"
+              comicData={state.comicData}
+              selectedStoryIndex={state.selectedStoryIndex}
+              imageReferences={state.imageReferences}
+              config={state.config}
+              onStorySelected={handleStorySelected}
+              onBack={handleBackToSetup}
+              onStateChange={handleStateChange}
+            />
+          )}
+
+          {state.currentStep === 3 && state.comicData && state.selectedStory && (
+            <ComicFinalization
+              key="finalization"
+              comicData={state.comicData}
+              selectedStory={state.selectedStory}
+              generatedImages={state.generatedImages}
+              updatedStory={state.updatedStory}
+              onComplete={handleFinalizationComplete}
+              onBack={handleBackToSelection}
+              onStateChange={handleStateChange}
+            />
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

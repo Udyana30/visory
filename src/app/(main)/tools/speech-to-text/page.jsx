@@ -2,7 +2,7 @@
 
 import { Search, Bell, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import ProfileDropdown from '@/app/(main)/home/sections/ProfileDropdown';
+import ProfileDropdown from '@/components/ui/ProfileDropdown';
 import SttForm from './sections/SttForm';
 import ResultDisplay from './sections/ResultDisplay';
 import { useSTT } from '@/hooks/useSTT';

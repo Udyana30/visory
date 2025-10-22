@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Search, Bell } from 'lucide-react';
-import ProfileDropdown from '@/app/(main)/home/sections/ProfileDropdown';
+import ProfileDropdown from '@/components/ui/ProfileDropdown';
 import ProjectHeader from './sections/ProjectHeader';
 import ProjectList from './sections/ProjectList';
 

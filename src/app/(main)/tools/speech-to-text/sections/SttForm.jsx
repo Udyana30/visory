@@ -18,7 +18,7 @@ export default function SttForm({ isLoading, onSubmit }) {
     audio_file: null,
   });
   const [audioPreview, setAudioPreview] = useState(null);
-  const [mode, setMode] = useState('upload'); // 'upload' or 'record'
+  const [mode, setMode] = useState('upload');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
 
