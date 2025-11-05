@@ -6,7 +6,7 @@ import {
   ComicQueryParams,
   ComicResponse,
   ComicListResponse,
-} from '../types/comic';
+} from '../types/comic2';
 
 const initComic = async (data: ComicInitData): Promise<ComicResponse> => {
   try {

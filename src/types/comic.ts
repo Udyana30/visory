@@ -1,54 +1,110 @@
-export interface ComicInitData {
-    title: string;
-    description?: string;
-    genre?: string;
-    characterPrompt?: string;
-    style?: string;
-    [key: string]: any;
+export interface Project {
+  id: string;
+  name: string;
+  genre: string;
+  artStyle: string;
+  pageSize: string;
+  createdAt: Date;
+  thumbnail?: string;
 }
-  
-export interface ComicSelectStoryData {
-    storyId: string;
-    [key: string]: any;
+
+export interface OnboardingStep {
+  icon: any;
+  title: string;
+  description: string;
+  image: string;
 }
-  
-export interface ComicFinalizeData {
-    selectedScenes: string[];
-    soundtrack?: string;
-    [key: string]: any;
+
+export interface ArtStyle {
+  id: number;
+  name: string;
+  preview: string;
 }
-  
-export interface Comic {
-    id: string;
-    title: string;
-    description?: string;
-    genre?: string;
-    status?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    [key: string]: any;
+
+export interface FormData {
+  comicName: string;
+  genre: string;
+  pageSize: string;
 }
-  
-export interface ComicQueryParams {
-    order_by?: string;
-    order_dir?: 'asc' | 'desc';
-    page?: number;
-    limit?: number;
+
+export interface Character {
+  id: string;
+  name: string;
+  gender: string;
+  age: string;
+  style: string;
+  imageUrl: string;
+  appearancePrompt?: string;
 }
-  
-export interface ComicResponse {
-    success: boolean;
-    data: Comic;
-    message?: string;
-    [key: string]: any;
+
+export interface StoryScene {
+  id: string;
+  description: string;
 }
-  
-export interface ComicListResponse {
-    success: boolean;
-    data: Comic[];
-    total?: number;
-    page?: number;
-    limit?: number;
-    [key: string]: any;
+
+export interface StoryData {
+  title: string;
+  overview: string;
+  scenes: StoryScene[];
 }
-  
+
+export interface SceneVisualization {
+  id: string;
+  sceneId: string;
+  prompt: string;
+  aspectRatio: string;
+  shotType: string;
+  shotSize: string;
+  shotAngle: string;
+  lighting: string;
+  mood: string;
+  composition: string;
+  characters: string[];
+  imageUrl?: string;
+}
+
+export interface ComicPanel {
+  id: string;
+  imageUrl: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  bubbles: SpeechBubble[];
+}
+
+export interface SpeechBubble {
+  id: string;
+  type: 'speech' | 'thought' | 'narration';
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fontSize: number;
+  fontFamily: string;
+  textAlign: 'left' | 'center' | 'right';
+  color: string;
+  backgroundColor: string;
+  borderColor: string;
+  borderWidth: number;
+}
+
+export interface ComicPage {
+  id: string;
+  layout: 'single' | 'double-horizontal' | 'double-vertical' | 'triple' | 'quad';
+  panels: ComicPanel[];
+  backgroundColor: string;
+}
+
+export interface ComicProject {
+  id: string;
+  title: string;
+  pages: ComicPage[];
+}
+
+export interface DraggedImage {
+  imageUrl: string;
+  visualizationId: string;
+}

@@ -23,7 +23,7 @@ const navigationItems = [
 const toolsItems = [
   { icon: Video, label: 'Video Generator', href: '/tools/video' },
   { icon: User, label: 'Avatar Generator', href: '/tools/avatar-generator' },
-  { icon: Image, label: 'Image Generator', href: '/tools/image-generator' },
+  { icon: Image, label: 'Comic Generator', href: '/tools/comic-generator' },
   { icon: MessageSquare, label: 'Text to Speech', href: '/tools/text-to-speech' },
   { icon: Mic, label: 'Speech to Text', href: '/tools/speech-to-text' },
 ];

@@ -6,6 +6,7 @@
       "login": "keys",
       "register": "secure",
       "image-generator": "images",
+      "comic-generator": "images",
       "speech-to-text": "audio",
       "text-to-speech": "audio",
       "avatar-generator": "plastic",
