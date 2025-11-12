@@ -8,11 +8,13 @@ interface ComicOverviewProps {
   selectedArtStyle: number | null;
   currentProgress: number;
   currentTimelineStep: number;
+  projectCreated: boolean;
   onInputChange: (field: string, value: string) => void;
   onStyleSelect: (index: number) => void;
-  onNext: () => void;
+  onCreate: () => void;
   onStepClick: (stepIndex: number) => void;
   isFormValid: boolean;
+  isLoading?: boolean;
 }
 
 export const ComicOverview: React.FC<ComicOverviewProps> = ({
@@ -20,11 +22,13 @@ export const ComicOverview: React.FC<ComicOverviewProps> = ({
   selectedArtStyle,
   currentProgress,
   currentTimelineStep,
+  projectCreated,
   onInputChange,
   onStyleSelect,
-  onNext,
+  onCreate,
   onStepClick,
-  isFormValid
+  isFormValid,
+  isLoading = false
 }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -42,20 +46,22 @@ export const ComicOverview: React.FC<ComicOverviewProps> = ({
           currentProgress={currentProgress}
           currentTimelineStep={currentTimelineStep}
           onStepClick={onStepClick}
-          isComicOverviewComplete={true}
+          isComicOverviewComplete={projectCreated}
         />
         
-        <button
-          onClick={onNext}
-          disabled={!isFormValid}
-          className={`w-full py-3 rounded-lg font-medium transition ${
-            isFormValid
-              ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          }`}
-        >
-          Next
-        </button>
+        {!projectCreated && (
+          <button
+            onClick={onCreate}
+            disabled={!isFormValid || isLoading}
+            className={`w-full py-3 rounded-lg font-medium transition ${
+              isFormValid && !isLoading
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {isLoading ? 'Creating Comic...' : 'Create Comic'}
+          </button>
+        )}
       </div>
     </div>
   );

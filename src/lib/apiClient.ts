@@ -6,13 +6,18 @@ import axios, {
 } from 'axios';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 60000,
+  maxRedirects: 5,
+  validateStatus: (status) => {
+    return (status >= 200 && status < 300) || status === 307;
+  },
 });
 
 apiClient.interceptors.request.use(
@@ -23,31 +28,95 @@ apiClient.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
+
+    if (isDevelopment) {
+      console.log(`🚀 ${config.method?.toUpperCase()} ${config.url}`, {
+        data: config.data,
+        params: config.params,
+      });
+    }
+
     return config;
   },
-  (error: AxiosError): Promise<never> => Promise.reject(error)
+  (error: AxiosError): Promise<never> => {
+    if (isDevelopment) {
+      console.error('❌ Request Setup Error:', error.message);
+    }
+    return Promise.reject(error);
+  }
 );
 
 apiClient.interceptors.response.use(
-  (response: AxiosResponse): AxiosResponse => response,
+  (response: AxiosResponse): AxiosResponse => {
+    if (isDevelopment) {
+      console.log(`✅ ${response.status} ${response.config.url}`, {
+        data: response.data,
+      });
+    }
+    return response;
+  },
   (error: AxiosError): Promise<never> => {
+    // Structured error handling
     if (error.response) {
       const { status, data } = error.response;
 
+      // Handle authentication errors
       if (status === 401 && typeof window !== 'undefined') {
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
         window.location.href = '/auth/login';
       }
 
-      console.error('API Error:', data);
-    } else if (error.request) {
-      console.error('Network Error:', error.request);
-    } else {
-      console.error('Error:', error.message);
-    }
+      if (isDevelopment) {
+        console.error('❌ API Error Response:', {
+          status,
+          statusText: error.response.statusText,
+          url: error.config?.url,
+          method: error.config?.method?.toUpperCase(),
+          data,
+        });
+      }
 
-    return Promise.reject(error);
+      const errorMessage = 
+        (data as any)?.message || 
+        (data as any)?.detail || 
+        `Request failed with status ${status}`;
+
+      const enhancedError = new Error(errorMessage);
+      (enhancedError as any).status = status;
+      (enhancedError as any).data = data;
+      
+      return Promise.reject(enhancedError);
+
+    } else if (error.request) {
+      // Network error - no response received
+      if (isDevelopment) {
+        console.error('❌ Network Error - No Response:', {
+          url: error.config?.url,
+          method: error.config?.method?.toUpperCase(),
+          message: error.message,
+          code: error.code,
+        });
+      }
+
+      const networkError = new Error(
+        error.code === 'ECONNABORTED'
+          ? 'Request timeout. Please try again.'
+          : error.code === 'ERR_NETWORK'
+          ? 'Network error. Please check your connection or backend server.'
+          : 'Failed to connect to server.'
+      );
+      (networkError as any).code = error.code;
+      
+      return Promise.reject(networkError);
+
+    } else {
+      // Request setup error
+      if (isDevelopment) {
+        console.error('❌ Request Error:', error.message);
+      }
+      return Promise.reject(error);
+    }
   }
 );
 

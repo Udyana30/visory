@@ -1,3 +1,4 @@
+// React Testing Library (RTL) || Jest DOM || Mocking
 import authService from "../authService";
 import apiClient from "../../lib/apiClient";
 
@@ -10,6 +11,7 @@ describe("authService", () => {
   });
 
   test("login() menyimpan token dan user ke localStorage", async () => {
+    // Simulasi respons dari API login
     const mockResponse = {
       data: {
         access_token: "abc123",
@@ -17,8 +19,10 @@ describe("authService", () => {
       },
     };
 
+    // Mock response dari apiClient.post
     apiClient.post.mockResolvedValueOnce(mockResponse);
 
+    // Jalankan fungsi login dari service
     const credentials = { email: "john@example.com", password: "123456" };
     const result = await authService.login(credentials);
 
@@ -28,6 +32,8 @@ describe("authService", () => {
       id: 1,
       name: "John Doe",
     });
+
+    // Hasil fungsi login harus mengembalikan data yang sama dengan dari server
     expect(result).toEqual(mockResponse.data);
   });
 
@@ -47,14 +53,17 @@ describe("authService", () => {
 
     const result = authService.getCurrentUser();
 
+    // Mengembalikan data user sesuai penyimpanan
     expect(result).toEqual(user);
   });
 
   test("getCurrentUser() mengembalikan null jika data rusak", () => {
+    // Simulasi data rusak (JSON tidak valid)
     localStorage.setItem("user", "{invalid-json");
 
     const result = authService.getCurrentUser();
 
+    // Mengembalikan null agar app tidak crash
     expect(result).toBeNull();
   });
 });

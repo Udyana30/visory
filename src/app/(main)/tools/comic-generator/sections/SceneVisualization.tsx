@@ -1,17 +1,28 @@
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { TimelineProgress } from '../components/TimelineProgress';
-import { SceneCard } from '../components//visualization/SceneCard';
+import { SceneCard } from '../components/visualization/SceneCard';
 import { Character } from '@/types/comic';
 import { SceneVisualization as SceneVisualizationType } from '@/types/scene';
 import { DEFAULT_SCENE_DATA } from '@/lib/scene';
+import { useComicProject } from '@/hooks/useComic';
+import { 
+  getAspectRatioValue, 
+  getShotTypeValue,
+  getShotSizeValue,
+  getShotAngleValue,
+  getLightingValue,
+  getMoodValue,
+  getCompositionValue,
+  parseCharacterMentions 
+} from '@/lib/sceneUtils';
 
 interface SceneVisualizationProps {
   selectedCharacters: Character[];
   currentTimelineStep: number;
   scenes: SceneVisualizationType[];
+  projectId: number | null;
   onScenesChange: (scenes: SceneVisualizationType[]) => void;
-  onGenerateScenes: () => void;
   onNext: () => void;
   onStepClick: (stepIndex: number) => void;
 }
@@ -20,12 +31,15 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
   selectedCharacters,
   currentTimelineStep,
   scenes,
+  projectId,
   onScenesChange,
-  onGenerateScenes,
   onNext,
   onStepClick
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingSceneIds, setGeneratingSceneIds] = useState<Set<string>>(new Set());
+  const { createScene, loading, error } = useComicProject();
+  
   const currentProgress = (currentTimelineStep / 5) * 100;
 
   const handleAddScene = () => {
@@ -52,20 +66,97 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
     onScenesChange(updatedScenes);
   };
 
-  const handleGenerateScenes = () => {
-    setIsGenerating(true);
-    onGenerateScenes();
-    setTimeout(() => {
-      setIsGenerating(false);
-    }, 2000);
+  const generateSingleScene = async (scene: SceneVisualizationType, index: number) => {
+    if (!projectId) {
+      alert('Project ID is required to generate scene');
+      return;
+    }
+
+    if (!scene.prompt.trim()) {
+      alert('Scene description is required');
+      return;
+    }
+
+    setGeneratingSceneIds(prev => new Set(prev).add(scene.id));
+
+    try {
+      const characterIds = scene.characters
+        .map(charId => {
+          const char = selectedCharacters.find(c => c.id === charId);
+          return char ? parseInt(char.id) : null;
+        })
+        .filter((id): id is number => id !== null);
+
+      const formattedPrompt = parseCharacterMentions(scene.prompt, scene.characters);
+
+      const sceneData = {
+        character_ids: characterIds,
+        background_id: null,
+        aspect_ratio: getAspectRatioValue(scene.aspectRatio),
+        shot_type: getShotTypeValue(scene.shotType),
+        shot_size: getShotSizeValue(scene.shotSize),
+        shot_angle: getShotAngleValue(scene.shotAngle),
+        lighting: getLightingValue(scene.lighting),
+        mood: getMoodValue(scene.mood),
+        composition: getCompositionValue(scene.composition),
+        prompt: formattedPrompt,
+        negative_prompt: 'blurry, low quality, distorted',
+        project_id: projectId
+      };
+
+      if (sceneData.character_ids.length === 0) {
+        delete (sceneData as any).character_ids;
+      }
+
+      console.log('📤 Sending scene data:', sceneData);
+
+      const response = await createScene(sceneData);
+
+      if (response) {
+        const updatedScenes = scenes.map((s, i) =>
+          i === index ? { ...s, imageUrl: response.image_url } : s
+        );
+        onScenesChange(updatedScenes);
+      }
+    } catch (err) {
+      console.error('Failed to generate scene:', err);
+    } finally {
+      setGeneratingSceneIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(scene.id);
+        return newSet;
+      });
+    }
   };
 
-  const handleGenerateAgain = () => {
+  const handleGenerateScenes = async () => {
+    if (!projectId) {
+      alert('Project ID is required to generate scenes');
+      return;
+    }
+
+    const invalidScenes = scenes.filter(scene => !scene.prompt.trim());
+    if (invalidScenes.length > 0) {
+      alert('All scenes must have a description');
+      return;
+    }
+
+    setIsGenerating(true);
+
+    for (const [index, scene] of scenes.entries()) {
+      await generateSingleScene(scene, index);
+    }
+
+    setIsGenerating(false);
+  };
+
+  const handleGenerateAgain = async () => {
     const clearedScenes = scenes.map(scene => ({
       ...scene,
       imageUrl: undefined
     }));
     onScenesChange(clearedScenes);
+    await handleGenerateScenes();
   };
 
   const hasGeneratedScenes = scenes.some(scene => scene.imageUrl);
@@ -89,6 +180,13 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
             Create and customize individual scenes for your comic. Define the visual style, mood, and composition for each panel.
           </p>
         </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm text-red-600 font-medium">Error:</p>
+            <p className="text-sm text-red-700 mt-1">{error.message}</p>
+          </div>
+        )}
 
         {isGenerating && (
           <div className="bg-white rounded-xl shadow-sm p-8">
@@ -120,14 +218,17 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
           </div>
         )}
 
-        {!isGenerating && scenes.map((scene, index) => (
+        {scenes.map((scene, index) => (
           <SceneCard
             key={scene.id}
             scene={scene}
             index={index}
             characters={selectedCharacters}
+            isGenerating={generatingSceneIds.has(scene.id)}
             onChange={(field, value) => handleSceneChange(index, field, value)}
             onDelete={() => handleDeleteScene(index)}
+            onGenerate={() => generateSingleScene(scene, index)}
+            projectId={projectId}
           />
         ))}
       </div>
@@ -143,14 +244,14 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
         {!hasGeneratedScenes ? (
           <button
             onClick={handleGenerateScenes}
-            disabled={!canGenerate || isGenerating}
+            disabled={!canGenerate || isGenerating || !projectId}
             className={`w-full py-3 rounded-lg font-medium transition ${
-              canGenerate && !isGenerating
+              canGenerate && !isGenerating && projectId
                 ? 'bg-teal-600 text-white hover:bg-teal-700'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {isGenerating ? 'Generating...' : 'Generate Scenes'}
+            {isGenerating ? 'Generating...' : 'Generate All Scenes'}
           </button>
         ) : (
           <>
@@ -162,7 +263,7 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
             </button>
             <button
               onClick={handleGenerateAgain}
-              disabled={isGenerating}
+              disabled={isGenerating || !projectId}
               className="w-full py-3 rounded-lg font-medium transition bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isGenerating ? 'Generating...' : 'Generate Again'}
@@ -175,6 +276,12 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">Total Scenes</span>
               <span className="font-semibold text-gray-900">{scenes.length}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm mt-2">
+              <span className="text-gray-600">Generated</span>
+              <span className="font-semibold text-gray-900">
+                {scenes.filter(s => s.imageUrl).length}
+              </span>
             </div>
             {selectedCharacters.length > 0 && (
               <div className="mt-3 pt-3 border-t border-gray-200">

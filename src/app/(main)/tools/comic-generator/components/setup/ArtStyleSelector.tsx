@@ -1,4 +1,5 @@
 import React from 'react';
+import { Check } from 'lucide-react';
 import { ART_STYLES } from '@/lib/comic';
 
 interface ArtStyleSelectorProps {
@@ -15,20 +16,40 @@ export const ArtStyleSelector: React.FC<ArtStyleSelectorProps> = ({
       <label className="block text-base font-semibold text-gray-800 mb-3">
         Art Style
       </label>
-      <div className="border-1 border-gray-700 rounded-xl p-4 bg-white h-[calc(100%-2rem)]">
-        <div className="grid grid-cols-3 gap-3 h-full">
+      <div className="border border-gray-300 rounded-xl p-4 bg-white">
+        <div className="grid grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
           {ART_STYLES.map((style, index) => (
             <button
               key={style.id}
               onClick={() => onSelectStyle(index)}
-              className={`rounded-xl border-1 transition flex flex-col items-center justify-center p-3 ${
+              className={`relative rounded-xl overflow-hidden border-2 transition-all group ${
                 selectedStyle === index
-                  ? 'border-gray-900 bg-gray-400'
-                  : 'border-transparent bg-gray-200 hover:bg-gray-300'
+                  ? 'border-blue-600 shadow-lg scale-105'
+                  : 'border-gray-200 hover:border-gray-400 hover:shadow-md'
               }`}
             >
-              <span className="text-3xl mb-1">{style.preview}</span>
-              <span className="text-xs font-medium text-gray-900">{style.name}</span>
+              <div className="aspect-square relative">
+                <img
+                  src={style.imageUrl}
+                  alt={style.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className={`absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent transition-opacity ${
+                  selectedStyle === index ? 'opacity-100' : 'opacity-80 group-hover:opacity-100'
+                }`} />
+                
+                {selectedStyle === index && (
+                  <div className="absolute top-2 right-2 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                    <Check className="w-4 h-4 text-white" />
+                  </div>
+                )}
+                
+                <div className="absolute bottom-0 left-0 right-0 p-3">
+                  <span className="text-sm font-semibold block text-center text-white">
+                    {style.name}
+                  </span>
+                </div>
+              </div>
             </button>
           ))}
         </div>

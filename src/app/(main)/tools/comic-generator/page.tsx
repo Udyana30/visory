@@ -7,6 +7,8 @@ import { ComicOverview } from './sections/ComicOverview';
 import { CharacterSetup } from './sections/CharacterSetup';
 import { SceneVisualization } from './sections/SceneVisualization';
 import { ComicEditor } from './sections/ComicEditor';
+import { LoadingModal } from '@/components/ui/LoadingModal';
+import { SuccessModal } from '@/components/ui/SuccessModal';
 import { Project, FormData, Character } from '@/types/comic';
 import { SceneVisualization as SceneVisualizationType } from '@/types/scene';
 import { 
@@ -14,6 +16,8 @@ import {
   TIMELINE_STEPS, 
   DUMMY_CHARACTERS 
 } from '@/lib/comic';
+import { useComicProject } from '@/hooks/useComic';
+import { getPageSize, getArtStyle } from '@/lib/comicUtils';
 
 export default function ComicGeneratorPage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -21,6 +25,13 @@ export default function ComicGeneratorPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedArtStyle, setSelectedArtStyle] = useState<number | null>(null);
   const [currentTimelineStep, setCurrentTimelineStep] = useState(0);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createdProjectName, setCreatedProjectName] = useState('');
+  const [projectCreated, setProjectCreated] = useState(false);
+  const [currentProjectId, setCurrentProjectId] = useState<number | null>(null);
+  
+  const { createProject, loading, error } = useComicProject();
   
   const [characters, setCharacters] = useState<Character[]>(DUMMY_CHARACTERS);
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([]);
@@ -33,24 +44,36 @@ export default function ComicGeneratorPage() {
   });
 
   useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem('comic_onboarding_seen');
+    const hasSeenOnboarding = typeof window !== 'undefined' 
+      ? localStorage.getItem('comic_onboarding_seen')
+      : null;
     if (!hasSeenOnboarding) {
       setShowOnboarding(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (error) {
+      alert(`Error: ${error.message}`);
+    }
+  }, [error]);
 
   const handleOnboardingNext = () => {
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     } else {
       setShowOnboarding(false);
-      localStorage.setItem('comic_onboarding_seen', 'true');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('comic_onboarding_seen', 'true');
+      }
     }
   };
 
   const handleOnboardingSkip = () => {
     setShowOnboarding(false);
-    localStorage.setItem('comic_onboarding_seen', 'true');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('comic_onboarding_seen', 'true');
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -74,27 +97,14 @@ export default function ComicGeneratorPage() {
     });
   };
 
-  const handleCreateCharacter = (
-    characterData: Omit<Character, 'id' | 'imageUrl'>,
-    files: File[]
-  ) => {
-    const imageUrl = files.length > 0
-      ? URL.createObjectURL(files[0])
-      : 'https://i.imgur.com/8pXRl5j.jpeg';
-
-    const newCharacter: Character = {
-      ...characterData,
-      id: Date.now().toString(),
-      imageUrl: imageUrl,
-    };
-    
-    setCharacters(prev => [newCharacter, ...prev]);
+  const handleCharacterCreated = (character: Character) => {
+    setCharacters(prev => [character, ...prev]);
     
     setSelectedCharacterIds(prev => {
       if (prev.length < 2) {
-        return [newCharacter.id, ...prev];
+        return [character.id, ...prev];
       }
-      return [newCharacter.id, prev[0]];
+      return [character.id, prev[0]];
     });
   };
 
@@ -102,16 +112,8 @@ export default function ComicGeneratorPage() {
     setScenes(updatedScenes);
   };
 
-  const handleGenerateScenes = () => {
-    const updatedScenes = scenes.map((scene, index) => ({
-      ...scene,
-      imageUrl: `/images/sample-${index + 1}.png`
-    }));
-    setScenes(updatedScenes);
-  };
-
   const isComicOverviewComplete = () => {
-    return !!(formData.comicName && formData.genre && formData.pageSize && selectedArtStyle !== null);
+    return !!(formData.comicName && formData.pageSize && selectedArtStyle !== null);
   };
 
   const isFormValid = () => {
@@ -127,32 +129,66 @@ export default function ComicGeneratorPage() {
     }
   };
 
+  const handleCreateComic = async () => {
+    if (!isFormValid()) return;
+    
+    setIsCreatingProject(true);
+    
+    const pageSize = getPageSize(formData.pageSize);
+    const artStyle = getArtStyle(ART_STYLES[selectedArtStyle!].name);
+    
+    const projectData = {
+      name: formData.comicName,
+      page_size: pageSize,
+      art_style: artStyle,
+    };
+    
+    const response = await createProject(projectData);
+    
+    if (response) {
+      const newProject: Project = {
+        id: response.id.toString(),
+        name: response.name,
+        genre: formData.genre,
+        artStyle: ART_STYLES[selectedArtStyle!].name,
+        pageSize: formData.pageSize,
+        createdAt: new Date(response.created_at)
+      };
+      
+      setProjects([...projects, newProject]);
+      setCreatedProjectName(response.name);
+      setCurrentProjectId(response.id);
+      setIsCreatingProject(false);
+      setProjectCreated(true);
+      setShowSuccessModal(true);
+    } else {
+      setIsCreatingProject(false);
+    }
+  };
+
   const handleNextStep = () => {
     if (!isFormValid()) return;
     
     if (currentTimelineStep < TIMELINE_STEPS.length - 1) {
       setCurrentTimelineStep(prev => prev + 1);
     } else {
-      const newProject: Project = {
-        id: Date.now().toString(),
-        name: formData.comicName,
-        genre: formData.genre,
-        artStyle: ART_STYLES[selectedArtStyle!].name,
-        pageSize: formData.pageSize,
-        createdAt: new Date()
-      };
-      
-      setProjects([...projects, newProject]);
       setFormData({ comicName: '', genre: '', pageSize: '' });
       setSelectedArtStyle(null);
       setSelectedCharacterIds([]);
       setScenes([]);
       setCurrentTimelineStep(0);
+      setProjectCreated(false);
+      setCurrentProjectId(null);
     }
   };
 
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    setCurrentTimelineStep(prev => prev + 1);
+  };
+
   const handleTimelineStepClick = (stepIndex: number) => {
-    if (stepIndex === 0 || isComicOverviewComplete()) {
+    if (stepIndex === 0 || projectCreated) {
       setCurrentTimelineStep(stepIndex);
     }
   };
@@ -180,11 +216,13 @@ export default function ComicGeneratorPage() {
             selectedArtStyle={selectedArtStyle}
             currentProgress={(currentTimelineStep / (TIMELINE_STEPS.length - 1)) * 100}
             currentTimelineStep={currentTimelineStep}
+            projectCreated={projectCreated}
             onInputChange={handleInputChange}
             onStyleSelect={handleStyleSelect}
-            onNext={handleNextStep}
+            onCreate={handleCreateComic}
             onStepClick={handleTimelineStepClick}
             isFormValid={isFormValid()}
+            isLoading={loading || isCreatingProject}
           />
         );
       case 1:
@@ -195,8 +233,9 @@ export default function ComicGeneratorPage() {
             selectedCharacters={selectedCharacters}
             currentTimelineStep={currentTimelineStep}
             isFormValid={isFormValid()}
+            projectId={currentProjectId}
             onSelectCharacter={handleSelectCharacter}
-            onCreateCharacter={handleCreateCharacter}
+            onCharacterCreated={handleCharacterCreated}
             onNext={handleNextStep}
             onStepClick={handleTimelineStepClick}
           />
@@ -207,8 +246,8 @@ export default function ComicGeneratorPage() {
             selectedCharacters={selectedCharacters}
             currentTimelineStep={currentTimelineStep}
             scenes={scenes}
+            projectId={currentProjectId}
             onScenesChange={handleScenesChange}
-            onGenerateScenes={handleGenerateScenes}
             onNext={handleNextStep}
             onStepClick={handleTimelineStepClick}
           />
@@ -217,6 +256,7 @@ export default function ComicGeneratorPage() {
         return (
           <ComicEditor
             visualizations={scenes.map(scene => ({ ...scene, sceneId: scene.id }))}
+            projectId={currentProjectId}
             onBack={() => setCurrentTimelineStep(2)}
             onNext={handleNextStep}
           />
@@ -228,6 +268,17 @@ export default function ComicGeneratorPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <LoadingModal 
+        isOpen={isCreatingProject} 
+        message="Creating your comic..."
+      />
+      
+      <SuccessModal
+        isOpen={showSuccessModal}
+        projectName={createdProjectName}
+        onClose={handleSuccessModalClose}
+      />
+
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="hidden md:block mb-10">
           <div className="flex items-center justify-between mb-4">

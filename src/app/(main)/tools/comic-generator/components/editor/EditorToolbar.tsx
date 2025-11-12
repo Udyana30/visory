@@ -11,12 +11,13 @@ import {
   Undo,
   Redo,
   Download,
-  Save
+  Save,
+  Square
 } from 'lucide-react';
 
 interface EditorToolbarProps {
-  activeTool: 'select' | 'bubble' | 'text' | 'image' | 'layout';
-  onToolChange: (tool: 'select' | 'bubble' | 'text' | 'image' | 'layout') => void;
+  activeTool: 'select' | 'bubble' | 'text' | 'image' | 'layout' | 'custom-panel';
+  onToolChange: (tool: 'select' | 'bubble' | 'text' | 'image' | 'layout' | 'custom-panel') => void;
   onUndo: () => void;
   onRedo: () => void;
   onZoomIn: () => void;
@@ -28,6 +29,7 @@ interface EditorToolbarProps {
   canRedo: boolean;
   zoom: number;
   isSaving: boolean;
+  isCustomPanelDisabled?: boolean;
 }
 
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({
@@ -43,14 +45,16 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   canUndo,
   canRedo,
   zoom,
-  isSaving
+  isSaving,
+  isCustomPanelDisabled = false
 }) => {
   const tools = [
-    { id: 'select', icon: Hand, label: 'Select' },
-    { id: 'bubble', icon: MessageSquare, label: 'Speech Bubble' },
-    { id: 'text', icon: Type, label: 'Text' },
-    { id: 'image', icon: Image, label: 'Image' },
-    { id: 'layout', icon: Layout, label: 'Layout' }
+    { id: 'select', icon: Hand, label: 'Select', disabled: false },
+    { id: 'bubble', icon: MessageSquare, label: 'Speech Bubble', disabled: false },
+    { id: 'text', icon: Type, label: 'Text', disabled: false },
+    { id: 'image', icon: Image, label: 'Image', disabled: false },
+    { id: 'layout', icon: Layout, label: 'Layout', disabled: false },
+    { id: 'custom-panel', icon: Square, label: 'Custom Panel (Select Custom Layout first)', disabled: isCustomPanelDisabled }
   ];
 
   return (
@@ -63,10 +67,13 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             return (
               <button
                 key={tool.id}
-                onClick={() => onToolChange(tool.id as any)}
+                onClick={() => !tool.disabled && onToolChange(tool.id as any)}
+                disabled={tool.disabled}
                 className={`p-2.5 rounded-lg transition ${
                   isActive
                     ? 'bg-blue-600 text-white shadow-md'
+                    : tool.disabled
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                 }`}
                 title={tool.label}

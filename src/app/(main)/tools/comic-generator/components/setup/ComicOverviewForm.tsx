@@ -1,6 +1,7 @@
 import React from 'react';
 import { GENRES, PAGE_SIZES } from '@/lib/comic';
 import { ArtStyleSelector } from './ArtStyleSelector';
+import { Dropdown } from './Dropdown';
 import { FormData } from '@/types/comic';
 
 interface ComicOverviewFormProps {
@@ -17,7 +18,7 @@ export const ComicOverviewForm: React.FC<ComicOverviewFormProps> = ({
   onStyleSelect
 }) => {
   return (
-    <div className="bg-white rounded-xl shadow-sm pt-6 pb-25 px-15 sticky top-8">
+    <div className="bg-white rounded-xl shadow-sm pt-6 pb-8 px-6 sticky top-8">
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">Comic Overview</h2>
         <p className="text-gray-700">
@@ -25,7 +26,7 @@ export const ComicOverviewForm: React.FC<ComicOverviewFormProps> = ({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         <div className="space-y-6">
           <div>
             <label className="block text-base font-semibold text-gray-900 mb-2">
@@ -35,49 +36,29 @@ export const ComicOverviewForm: React.FC<ComicOverviewFormProps> = ({
               type="text"
               value={formData.comicName}
               onChange={(e) => onInputChange('comicName', e.target.value)}
-              className="w-full px-4 py-3 border-1 border-gray-900 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition text-gray-900"
-              placeholder=""
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-gray-900"
+              placeholder="Enter comic name"
             />
           </div>
 
-          <div>
-            <label className="block text-base font-semibold text-black mb-2">
-              Genre
-            </label>
-            <select
-              value={formData.genre}
-              onChange={(e) => onInputChange('genre', e.target.value)}
-              className="w-full px-4 py-3 border-1 border-gray-900 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition appearance-none text-gray-900 bg-white"
-            >
-              <option value=""></option>
-              {GENRES.map((genre) => (
-                <option key={genre} value={genre}>
-                  {genre}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Dropdown
+            label="Genre"
+            value={formData.genre}
+            options={GENRES}
+            placeholder="Select genre"
+            onChange={(value) => onInputChange('genre', value)}
+          />
 
-          <div>
-            <label className="block text-base font-semibold text-gray-900 mb-2">
-              Page Size
-            </label>
-            <select
-              value={formData.pageSize}
-              onChange={(e) => onInputChange('pageSize', e.target.value)}
-              className="w-full px-4 py-3 border-1 border-gray-900 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition appearance-none text-gray-900 bg-white"
-            >
-              <option value=""></option>
-              {PAGE_SIZES.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Dropdown
+            label="Page Size"
+            value={formData.pageSize}
+            options={PAGE_SIZES}
+            placeholder="Select page size"
+            onChange={(value) => onInputChange('pageSize', value)}
+          />
         </div>
 
-        <div>
+        <div className="h-full">
           <ArtStyleSelector
             selectedStyle={selectedArtStyle}
             onSelectStyle={onStyleSelect}

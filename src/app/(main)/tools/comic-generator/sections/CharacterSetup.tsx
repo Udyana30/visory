@@ -3,6 +3,7 @@ import { TimelineProgress } from '../components/TimelineProgress';
 import { CharacterCard } from '../components/character/CharacterCard';
 import { CreateCharacterModal } from '../components/character/CreateCharacterModal';
 import { Character } from '@/types/comic';
+import { useComicProject } from '@/hooks/useComic';
 
 interface CharacterSetupProps {
   characters: Character[];
@@ -10,11 +11,9 @@ interface CharacterSetupProps {
   selectedCharacters: Character[];
   currentTimelineStep: number;
   isFormValid: boolean;
+  projectId: number | null;
   onSelectCharacter: (id: string) => void;
-  onCreateCharacter: (
-    characterData: Omit<Character, 'id' | 'imageUrl'>,
-    files: File[]
-  ) => void;
+  onCharacterCreated: (character: Character) => void;
   onNext: () => void;
   onStepClick: (stepIndex: number) => void;
 }
@@ -25,13 +24,55 @@ export const CharacterSetup: React.FC<CharacterSetupProps> = ({
   selectedCharacters,
   currentTimelineStep,
   isFormValid,
+  projectId,
   onSelectCharacter,
-  onCreateCharacter,
+  onCharacterCreated,
   onNext,
   onStepClick
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { createCharacter, loading, error } = useComicProject();
+  
   const currentProgress = (currentTimelineStep / 5) * 100;
+
+  const handleCreateCharacter = async (characterData: {
+    name: string;
+    prompt: string;
+    clothingPrompt: string;
+    negativePrompt: string;
+  }) => {
+    if (!projectId) {
+      alert('Project ID is required to create character');
+      return;
+    }
+
+    const response = await createCharacter({
+      name: characterData.name,
+      type: 'character',
+      project_id: projectId,
+      prompt: characterData.prompt,
+      clothing_prompt: characterData.clothingPrompt,
+      negative_prompt: characterData.negativePrompt
+    });
+
+    if (response) {
+      const newCharacter: Character = {
+        id: response.id.toString(),
+        name: response.name,
+        gender: '',
+        age: '',
+        style: '',
+        imageUrl: response.preview_url,
+        appearancePrompt: response.prompt,
+        clothingPrompt: response.clothing_prompt,
+        negativePrompt: response.negative_prompt,
+        llmDescription: response.llm_description
+      };
+      
+      onCharacterCreated(newCharacter);
+      setIsModalOpen(false);
+    }
+  };
 
   return (
     <>
@@ -44,11 +85,18 @@ export const CharacterSetup: React.FC<CharacterSetupProps> = ({
             </div>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition"
+              className="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+              disabled={!projectId || loading}
             >
               + Create Character
             </button>
           </div>
+
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{error.message}</p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {characters.map(character => (
@@ -65,11 +113,22 @@ export const CharacterSetup: React.FC<CharacterSetupProps> = ({
           {selectedCharacters.length > 0 && (
             <div className="mt-6 pt-6 border-t border-gray-200">
               <p className="text-sm text-gray-700">
-                Anda telah memilih:{' '}
+                You have selected:{' '}
                 <span className="font-semibold text-gray-900">
-                  {selectedCharacters.map(c => c.name).join(' dan ')}
+                  {selectedCharacters.map(c => c.name).join(' and ')}
                 </span>
               </p>
+              
+              {selectedCharacters.some(c => c.llmDescription) && (
+                <div className="mt-4 space-y-3">
+                  {selectedCharacters.filter(c => c.llmDescription).map(character => (
+                    <div key={character.id} className="p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-2">{character.name}</h4>
+                      <p className="text-sm text-gray-600 leading-relaxed">{character.llmDescription}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -98,8 +157,10 @@ export const CharacterSetup: React.FC<CharacterSetupProps> = ({
 
       <CreateCharacterModal
         isOpen={isModalOpen}
+        projectId={projectId}
         onClose={() => setIsModalOpen(false)}
-        onCreate={onCreateCharacter}
+        onCreate={handleCreateCharacter}
+        loading={loading}
       />
     </>
   );

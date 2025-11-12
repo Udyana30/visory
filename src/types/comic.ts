@@ -35,6 +35,9 @@ export interface Character {
   style: string;
   imageUrl: string;
   appearancePrompt?: string;
+  clothingPrompt?: string;
+  negativePrompt?: string;
+  llmDescription?: string;
 }
 
 export interface StoryScene {

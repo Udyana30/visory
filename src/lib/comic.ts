@@ -7,6 +7,13 @@ import {
 
 import { Character } from '@/types/comic';
 
+export interface ArtStyle {
+  id: number;
+  name: string;
+  preview: string;
+  imageUrl: string;
+}
+
 export const ONBOARDING_STEPS = [
   {
     icon: Sparkles,
@@ -34,13 +41,55 @@ export const ONBOARDING_STEPS = [
   }
 ];
 
-export const ART_STYLES = [
-  { id: 1, name: 'Manga', preview: '🎌' },
-  { id: 2, name: 'Superhero', preview: '🦸' },
-  { id: 3, name: 'Cartoon', preview: '🎪' },
-  { id: 4, name: 'Realistic', preview: '🎭' },
-  { id: 5, name: 'Anime', preview: '⭐' },
-  { id: 6, name: 'Retro', preview: '📻' }
+export const ART_STYLES: ArtStyle[] = [
+  { 
+    id: 1, 
+    name: 'Manga', 
+    preview: '🎌',
+    imageUrl: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400&h=400&fit=crop'
+  },
+  { 
+    id: 2, 
+    name: 'Superhero', 
+    preview: '🦸',
+    imageUrl: 'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=400&h=400&fit=crop'
+  },
+  { 
+    id: 3, 
+    name: 'Cartoon', 
+    preview: '🎪',
+    imageUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400&h=400&fit=crop'
+  },
+  { 
+    id: 4, 
+    name: 'Realistic', 
+    preview: '🎭',
+    imageUrl: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400&h=400&fit=crop'
+  },
+  { 
+    id: 5, 
+    name: 'Anime', 
+    preview: '⭐',
+    imageUrl: 'https://images.unsplash.com/photo-1578632292335-df3abbb0d586?w=400&h=400&fit=crop'
+  },
+  { 
+    id: 6, 
+    name: 'Retro', 
+    preview: '📻',
+    imageUrl: 'https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=400&h=400&fit=crop'
+  },
+  { 
+    id: 7, 
+    name: 'Watercolor', 
+    preview: '🎨',
+    imageUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&h=400&fit=crop'
+  },
+  { 
+    id: 8, 
+    name: 'Noir', 
+    preview: '🎬',
+    imageUrl: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=400&h=400&fit=crop'
+  }
 ];
 
 export const GENRES = [
@@ -77,70 +126,12 @@ export const GENDERS = ['Male', 'Female', 'Non-Binary', 'Other'];
 export const AGE_CATEGORIES = ['Child', 'Teenager', 'Young Adult', 'Adult', 'Elder'];
 
 export const DUMMY_CHARACTERS: Character[] = [
-  { id: '1', name: 'Dexter', gender: 'Male', age: '28', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop' },
-  { id: '2', name: 'Rexola', gender: 'Female', age: '24', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop' },
-  { id: '3', name: 'Jax', gender: 'Male', age: '35', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop' },
-  { id: '4', name: 'Zoe', gender: 'Female', age: '21', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop' },
-  { id: '5', name: 'Maximus', gender: 'Male', age: '40', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop' },
-  { id: '6', name: 'Leona', gender: 'Female', age: '29', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&h=400&fit=crop' },
-  { id: '7', name: 'Orion', gender: 'Male', age: '26', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop' },
-  { id: '8', name: 'Silas', gender: 'Male', age: '31', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop' },
-];
-
-export const ASPECT_RATIOS = [
-  'Square (1:1)', 
-  'Portrait (9:16)', 
-  'Landscape (16:9)', 
-  'Widescreen (21:9)'
-];
-
-export const SHOT_TYPES = [
-  'Front View', 
-  'Side View', 
-  'Back View', 
-  'Three-Quarter View', 
-  'Bird\'s Eye View'
-];
-
-export const SHOT_SIZES = [
-  'Extreme Close-Up', 
-  'Close-Up', 
-  'Medium Shot', 
-  'Full Shot', 
-  'Long Shot'
-];
-
-export const SHOT_ANGLES = [
-  'Eye Level', 
-  'High Angle', 
-  'Low Angle', 
-  'Dutch Angle', 
-  'Over-the-Shoulder'
-];
-
-export const LIGHTING_OPTIONS = [
-  'Natural', 
-  'Dramatic', 
-  'Soft', 
-  'Hard', 
-  'Backlit', 
-  'Silhouette'
-];
-
-export const MOOD_OPTIONS = [
-  'Happy', 
-  'Sad', 
-  'Tense', 
-  'Peaceful', 
-  'Epic', 
-  'Mysterious', 
-  'Romantic'
-];
-
-export const COMPOSITION_OPTIONS = [
-  'Rule of Thirds', 
-  'Centered', 
-  'Symmetrical', 
-  'Leading Lines', 
-  'Frame within Frame'
+  { id: '100', name: 'Dexter', gender: 'Male', age: '28', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop' },
+  { id: '102', name: 'Rexola', gender: 'Female', age: '24', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop' },
+  { id: '103', name: 'Jax', gender: 'Male', age: '35', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop' },
+  { id: '104', name: 'Zoe', gender: 'Female', age: '21', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop' },
+  { id: '105', name: 'Maximus', gender: 'Male', age: '40', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop' },
+  { id: '106', name: 'Leona', gender: 'Female', age: '29', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&h=400&fit=crop' },
+  { id: '107', name: 'Orion', gender: 'Male', age: '26', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop' },
+  { id: '108', name: 'Silas', gender: 'Male', age: '31', style: 'Realistic', imageUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop' },
 ];

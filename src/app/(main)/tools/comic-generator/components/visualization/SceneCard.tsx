@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { MoreVertical, ChevronDown, Trash2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { MoreVertical, ChevronDown, Trash2, Wand2 } from 'lucide-react';
 import { Character } from '@/types/comic';
 import { SceneVisualization } from '@/types/scene';
 import {
@@ -16,19 +16,28 @@ interface SceneCardProps {
   scene: SceneVisualization;
   index: number;
   characters: Character[];
+  isGenerating?: boolean;
+  projectId: number | null;
   onChange: (field: keyof SceneVisualization, value: string | string[]) => void;
   onDelete: () => void;
+  onGenerate: () => void;
 }
 
 export const SceneCard: React.FC<SceneCardProps> = ({
   scene,
   index,
   characters,
+  isGenerating = false,
+  projectId,
   onChange,
-  onDelete
+  onDelete,
+  onGenerate
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
+  const [showCharacterMenu, setShowCharacterMenu] = useState(false);
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const toggleCharacter = (charId: string) => {
     const updated = scene.characters.includes(charId)
@@ -38,6 +47,66 @@ export const SceneCard: React.FC<SceneCardProps> = ({
       : scene.characters;
     onChange('characters', updated);
   };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    const position = e.target.selectionStart;
+    
+    onChange('prompt', value);
+    setCursorPosition(position);
+
+    if (value[position - 1] === '@') {
+      setShowCharacterMenu(true);
+    } else {
+      setShowCharacterMenu(false);
+    }
+  };
+
+  const handleCharacterMention = (charId: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const beforeCursor = scene.prompt.slice(0, cursorPosition);
+    const afterCursor = scene.prompt.slice(cursorPosition);
+    const lastAtIndex = beforeCursor.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1) {
+      const newPrompt = 
+        scene.prompt.slice(0, lastAtIndex) + 
+        `@${charId} ` + 
+        afterCursor;
+      
+      onChange('prompt', newPrompt);
+      setShowCharacterMenu(false);
+      
+      setTimeout(() => {
+        const newPosition = lastAtIndex + charId.length + 2;
+        textarea.setSelectionRange(newPosition, newPosition);
+        textarea.focus();
+      }, 0);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Escape' && showCharacterMenu) {
+      setShowCharacterMenu(false);
+      e.preventDefault();
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showCharacterMenu) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.character-mention-menu')) {
+          setShowCharacterMenu(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCharacterMenu]);
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
@@ -68,7 +137,14 @@ export const SceneCard: React.FC<SceneCardProps> = ({
       </div>
 
       <div className="p-6">
-        {scene.imageUrl && (
+        {isGenerating && (
+          <div className="mb-6 p-8 bg-gray-50 rounded-lg flex flex-col items-center justify-center">
+            <div className="w-12 h-12 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mb-3"></div>
+            <p className="text-sm font-medium text-gray-700">Generating scene...</p>
+          </div>
+        )}
+
+        {!isGenerating && scene.imageUrl && (
           <div className="mb-6">
             <img
               src={scene.imageUrl}
@@ -106,7 +182,7 @@ export const SceneCard: React.FC<SceneCardProps> = ({
                       <p className="text-white text-xs font-medium">{char.name}</p>
                       {isSelected && (
                         <span className="text-[10px] bg-teal-500 text-white px-1.5 py-0.5 rounded">
-                          Character {scene.characters.indexOf(char.id) + 1}
+                          ID: {char.id}
                         </span>
                       )}
                     </div>
@@ -130,17 +206,51 @@ export const SceneCard: React.FC<SceneCardProps> = ({
             </button>
           </div>
           {isExpanded && (
-            <textarea
-              value={scene.prompt}
-              onChange={(e) => onChange('prompt', e.target.value)}
-              rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition text-sm text-gray-700 resize-none"
-              placeholder="Describe your scene in detail..."
-            />
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                value={scene.prompt}
+                onChange={handleTextareaChange}
+                onKeyDown={handleKeyDown}
+                onClick={(e) => setCursorPosition(e.currentTarget.selectionStart)}
+                rows={4}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition text-sm text-gray-700 resize-none"
+                placeholder="Describe your scene... Type @ to mention characters"
+              />
+              
+              {showCharacterMenu && characters.length > 0 && (
+                <div className="character-mention-menu absolute z-20 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <div className="p-2">
+                    <p className="text-xs text-gray-500 px-2 py-1 mb-1">Select a character</p>
+                    {characters.map(char => (
+                      <button
+                        key={char.id}
+                        onClick={() => handleCharacterMention(char.id)}
+                        className="w-full flex items-center gap-2 px-2 py-2 hover:bg-gray-100 rounded transition text-left"
+                      >
+                        <img
+                          src={char.imageUrl}
+                          alt={char.name}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{char.name}</p>
+                          <p className="text-xs text-gray-500">ID: {char.id}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <p className="text-xs text-gray-500 mt-2">
+                Tip: Type @ to mention characters by ID in your prompt
+              </p>
+            </div>
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 mb-6">
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-2">Aspect Ratio</label>
             <select
@@ -232,6 +342,21 @@ export const SceneCard: React.FC<SceneCardProps> = ({
             </select>
           </div>
         </div>
+
+        {!scene.imageUrl && (
+          <button
+            onClick={onGenerate}
+            disabled={!scene.prompt.trim() || isGenerating || !projectId}
+            className={`w-full py-2.5 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
+              scene.prompt.trim() && !isGenerating && projectId
+                ? 'bg-teal-600 text-white hover:bg-teal-700'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            <Wand2 className="w-4 h-4" />
+            {isGenerating ? 'Generating...' : 'Generate This Scene'}
+          </button>
+        )}
       </div>
     </div>
   );

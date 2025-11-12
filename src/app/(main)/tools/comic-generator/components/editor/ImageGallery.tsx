@@ -73,7 +73,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
         Drag images to panels
       </p>
 
-      <div className="space-y-3 max-h-64 overflow-y-auto">
+      <div className="space-y-3">
         {validVisualizations.length === 0 ? (
           <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
             <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />

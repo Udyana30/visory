@@ -1,11 +1,11 @@
 export interface ComicPage {
     id: string;
-    layout: 'single' | 'double-horizontal' | 'double-vertical' | 'triple' | 'quad';
+    layout: 'single' | 'double' | 'triple' | 'quad' | 'custom';
     panels: ComicPanel[];
     backgroundColor: string;
-}
+  }
   
-export interface ComicPanel {
+  export interface ComicPanel {
     id: string;
     imageUrl: string;
     x: number;
@@ -14,9 +14,15 @@ export interface ComicPanel {
     height: number;
     rotation: number;
     bubbles: SpeechBubble[];
-}
+    imagePosition?: {
+      x: number;
+      y: number;
+    };
+    imageScale?: number;
+    isCustom?: boolean;
+  }
   
-export interface SpeechBubble {
+  export interface SpeechBubble {
     id: string;
     type: 'speech' | 'thought' | 'narration' | 'shout' | 'whisper';
     text: string;
@@ -31,9 +37,9 @@ export interface SpeechBubble {
     backgroundColor: string;
     borderColor: string;
     borderWidth: number;
-}
+  }
   
-export interface SceneVisualization {
+  export interface SceneVisualization {
     id: string;
     sceneId: string;
     prompt: string;
@@ -46,24 +52,43 @@ export interface SceneVisualization {
     composition: string;
     characters: string[];
     imageUrl?: string;
-}
+  }
   
-export interface DraggedImage {
+  export interface DraggedImage {
     imageUrl: string;
     visualizationId: string;
-}
+  }
   
-export type EditorTool = 'select' | 'bubble' | 'text' | 'image' | 'layout';
+  export interface DraggedPanel {
+    panelId: string;
+    imageUrl: string;
+  }
   
-export interface BubbleTemplate {
+  export type EditorTool = 'select' | 'bubble' | 'text' | 'image' | 'layout' | 'custom-panel';
+  
+  export interface BubbleTemplate {
     id: string;
     name: string;
     icon: string;
     preview: string;
     style: Partial<SpeechBubble>;
-}
+  }
   
-export interface EditorHistory {
+  export interface EditorHistory {
     pages: ComicPage[];
     currentPageIndex: number;
-}
+  }
+  
+  export interface PanelDefinition {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }
+  
+  export interface CustomPanelDrawing {
+    startX: number;
+    startY: number;
+    width: number;
+    height: number;
+  }

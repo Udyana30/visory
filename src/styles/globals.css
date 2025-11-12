@@ -3,12 +3,14 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.4);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --scrollbar-thumb: rgba(255, 255, 255, 0.4);
   }
 }
 
@@ -22,7 +24,7 @@ body {
   * {
     @apply border-gray-200;
   }
-  
+
   body {
     @apply bg-white text-gray-900 antialiased;
   }
@@ -33,8 +35,31 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-minimal {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 10px;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-button {
     display: none;
   }
 }

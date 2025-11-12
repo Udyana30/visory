@@ -2,10 +2,10 @@ import { BubbleTemplate } from '@/types/editor';
 
 export const PAGE_LAYOUTS = [
   { id: 'single', name: 'Single Panel', icon: '□' },
-  { id: 'double-horizontal', name: 'Double Horizontal', icon: '⬚⬚' },
-  { id: 'double-vertical', name: 'Double Vertical', icon: '⬜' },
+  { id: 'double', name: 'Double Panel', icon: '⬚⬚' },
   { id: 'triple', name: 'Triple Panel', icon: '⬚⬚⬚' },
-  { id: 'quad', name: 'Quad Panel', icon: '⬚⬚⬚⬚' }
+  { id: 'quad', name: 'Quad Panel', icon: '⬚⬚⬚⬚' },
+  { id: 'custom', name: 'Custom Layout', icon: '⊞' }
 ];
 
 export const BUBBLE_TEMPLATES: BubbleTemplate[] = [
@@ -106,13 +106,9 @@ export const PANEL_LAYOUTS = {
   single: [
     { x: 0, y: 0, width: 100, height: 100 }
   ],
-  'double-horizontal': [
+  double: [
     { x: 0, y: 0, width: 100, height: 48 },
     { x: 0, y: 52, width: 100, height: 48 }
-  ],
-  'double-vertical': [
-    { x: 0, y: 0, width: 48, height: 100 },
-    { x: 52, y: 0, width: 48, height: 100 }
   ],
   triple: [
     { x: 0, y: 0, width: 100, height: 30 },
