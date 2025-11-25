@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ArrowLeft, Upload, Loader2 } from "lucide-react";
-import useComic from "@/hooks/useComic";
+import useComic from "@/hooks/comic/useComic";
 import StoryCard from "../components/StoryCard";
 import StoryConfigForm from "../components/StoryConfigForm";
 

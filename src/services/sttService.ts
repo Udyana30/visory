@@ -1,38 +1,34 @@
-import apiClient from '../lib/apiClient';
-import { STTQueryParams, STTResponse, STTCreateResponse } from '../types/stt';
+import apiClient from '@/lib/apiClient';
+import { STTQueryParams, STTCreateResponse, STTListResponse } from '@/types/stt';
 
-const getSTT = async (params: STTQueryParams = {}): Promise<STTResponse[]> => {
-  try {
-    const queryParams = new URLSearchParams({
-      order_by: params.order_by || 'id',
-      order_dir: params.order_dir || 'asc',
-      page: String(params.page || 1),
-      limit: String(params.limit || 10),
-    });
+const getSTT = async (params: STTQueryParams = {}) => {
+  const queryParams = new URLSearchParams({
+    order_by: params.order_by || 'created_at',
+    order_dir: params.order_dir || 'desc',
+    page: String(params.page || 1),
+    limit: String(params.limit || 50),
+  });
 
-    const response = await apiClient.get<STTResponse[]>(`/service/stt?${queryParams}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error in getSTT service:', error);
-    throw error;
-  }
+  const response = await apiClient.get<STTListResponse>(`/service/stt?${queryParams}`);
+  return response.data;
 };
 
-const createSTT = async (formData: FormData): Promise<STTCreateResponse> => {
-  try {
-    const response = await apiClient.post<STTCreateResponse>('/service/stt/create', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error in createSTT service:', error);
-    throw error;
-  }
+const createSTT = async (formData: FormData) => {
+  const response = await apiClient.post<STTCreateResponse>('/service/stt/create', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+const deleteSTT = async (id: number) => {
+  const response = await apiClient.delete(`/service/stt/${id}`);
+  return response.data;
 };
 
 export const sttService = {
   getSTT,
   createSTT,
+  deleteSTT,
 };

@@ -4,6 +4,7 @@ import axios, {
   AxiosResponse,
   InternalAxiosRequestConfig,
 } from 'axios';
+import { cookies } from './cookies';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -23,7 +24,7 @@ const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('access_token');
+      const token = cookies.get('access_token') || localStorage.getItem('access_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -31,7 +32,7 @@ apiClient.interceptors.request.use(
 
     if (isDevelopment) {
       console.log(`🚀 ${config.method?.toUpperCase()} ${config.url}`, {
-        data: config.data,
+        data: config.data instanceof FormData ? 'FormData' : config.data,
         params: config.params,
       });
     }
@@ -56,15 +57,17 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error: AxiosError): Promise<never> => {
-    // Structured error handling
     if (error.response) {
       const { status, data } = error.response;
 
-      // Handle authentication errors
-      if (status === 401 && typeof window !== 'undefined') {
+      if ((status === 401 || status === 403) && typeof window !== 'undefined') {
+        cookies.remove('access_token');
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
-        window.location.href = '/auth/login';
+        
+        window.location.href = '/login';
+        
+        return Promise.reject(new Error('Session expired. Please login again.'));
       }
 
       if (isDevelopment) {
@@ -73,8 +76,18 @@ apiClient.interceptors.response.use(
           statusText: error.response.statusText,
           url: error.config?.url,
           method: error.config?.method?.toUpperCase(),
-          data,
+          requestData: error.config?.data instanceof FormData 
+            ? 'FormData (check Network tab)' 
+            : error.config?.data,
+          responseData: data,
         });
+
+        if (status === 422) {
+          console.error('🔍 Validation Error:', {
+            detail: (data as any)?.detail,
+            errors: (data as any)?.errors,
+          });
+        }
       }
 
       const errorMessage = 
@@ -89,7 +102,6 @@ apiClient.interceptors.response.use(
       return Promise.reject(enhancedError);
 
     } else if (error.request) {
-      // Network error - no response received
       if (isDevelopment) {
         console.error('❌ Network Error - No Response:', {
           url: error.config?.url,
@@ -111,7 +123,6 @@ apiClient.interceptors.response.use(
       return Promise.reject(networkError);
 
     } else {
-      // Request setup error
       if (isDevelopment) {
         console.error('❌ Request Error:', error.message);
       }

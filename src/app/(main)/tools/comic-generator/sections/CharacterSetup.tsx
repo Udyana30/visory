@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { TimelineProgress } from '../components/TimelineProgress';
 import { CharacterCard } from '../components/character/CharacterCard';
 import { CreateCharacterModal } from '../components/character/CreateCharacterModal';
-import { Character } from '@/types/comic';
-import { useComicProject } from '@/hooks/useComic';
+import { Character } from '@/app/(main)/tools/comic-generator/types/comic';
+import { useComicProject } from '@/hooks/comic/useComic';
 
 interface CharacterSetupProps {
   characters: Character[];
@@ -31,7 +31,7 @@ export const CharacterSetup: React.FC<CharacterSetupProps> = ({
   onStepClick
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { createCharacter, loading, error } = useComicProject();
+  const { createCharacter, createCustomCharacter, loading, error } = useComicProject();
   
   const currentProgress = (currentTimelineStep / 5) * 100;
 
@@ -62,6 +62,33 @@ export const CharacterSetup: React.FC<CharacterSetupProps> = ({
         gender: '',
         age: '',
         style: '',
+        imageUrl: response.preview_url,
+        appearancePrompt: response.prompt,
+        clothingPrompt: response.clothing_prompt,
+        negativePrompt: response.negative_prompt,
+        llmDescription: response.llm_description
+      };
+      
+      onCharacterCreated(newCharacter);
+      setIsModalOpen(false);
+    }
+  };
+
+  const handleUploadCharacter = async (file: File) => {
+    if (!projectId) {
+      alert('Project ID is required');
+      return;
+    }
+
+    const response = await createCustomCharacter(projectId, file);
+
+    if (response) {
+      const newCharacter: Character = {
+        id: response.id.toString(),
+        name: file.name.split('.')[0],
+        gender: 'Custom',
+        age: 'Custom',
+        style: 'Reference',
         imageUrl: response.preview_url,
         appearancePrompt: response.prompt,
         clothingPrompt: response.clothing_prompt,
@@ -160,6 +187,7 @@ export const CharacterSetup: React.FC<CharacterSetupProps> = ({
         projectId={projectId}
         onClose={() => setIsModalOpen(false)}
         onCreate={handleCreateCharacter}
+        onUpload={handleUploadCharacter}
         loading={loading}
       />
     </>

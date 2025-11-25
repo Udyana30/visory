@@ -1,31 +1,33 @@
 import { useState, useCallback } from 'react';
 import { ttsService } from '../services/ttsService';
-import type { TTSRequestData, TTSResponse, TTSQueryParams } from '../types/tts';
+import type { TTSRequestData, TTSResult, TTSQueryParams } from '../types/tts';
 
 interface UseTTSReturn {
   isLoading: boolean;
   error: string | null;
-  results: TTSResponse[] | null;
-  generatedTTS: TTSResponse | null;
-  fetchTTS: (params?: TTSQueryParams) => Promise<TTSResponse[]>;
-  generateTTS: (data: TTSRequestData) => Promise<TTSResponse>;
+  results: TTSResult[] | null;
+  generatedTTS: TTSResult | null;
+  fetchTTS: (params?: TTSQueryParams) => Promise<TTSResult[]>;
+  generateTTS: (data: TTSRequestData) => Promise<TTSResult>;
+  deleteTTS: (id: number) => Promise<void>;
   resetTTS: () => void;
 }
 
 export const useTTS = (): UseTTSReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<TTSResponse[] | null>(null);
-  const [generatedTTS, setGeneratedTTS] = useState<TTSResponse | null>(null);
+  const [results, setResults] = useState<TTSResult[] | null>(null);
+  const [generatedTTS, setGeneratedTTS] = useState<TTSResult | null>(null);
 
-  const fetchTTS = useCallback(async (params?: TTSQueryParams): Promise<TTSResponse[]> => {
+  const fetchTTS = useCallback(async (params?: TTSQueryParams): Promise<TTSResult[]> => {
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await ttsService.getTTS(params);
-      setResults(response);
-      return response;
+      const data = response.data || [];
+      setResults(data);
+      return data;
     } catch (err: any) {
       const message = err.response?.data?.message || err.message || 'Failed to fetch TTS data';
       setError(message);
@@ -35,20 +37,32 @@ export const useTTS = (): UseTTSReturn => {
     }
   }, []);
 
-  const generateTTS = useCallback(async (data: TTSRequestData): Promise<TTSResponse> => {
+  const generateTTS = useCallback(async (data: TTSRequestData): Promise<TTSResult> => {
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await ttsService.createTTS(data);
-      setGeneratedTTS(response);
-      return response;
+      const result = response.data;
+      setGeneratedTTS(result);
+      return result;
     } catch (err: any) {
       const message = err.response?.data?.message || err.message || 'Failed to generate TTS';
       setError(message);
       throw new Error(message);
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  const deleteTTS = useCallback(async (id: number): Promise<void> => {
+    try {
+      await ttsService.deleteTTS(id);
+      setResults((prev) => (prev ? prev.filter((item) => item.id !== id) : null));
+    } catch (err: any) {
+      const message = err.response?.data?.message || err.message || 'Failed to delete TTS';
+      setError(message);
+      throw new Error(message);
     }
   }, []);
 
@@ -66,6 +80,7 @@ export const useTTS = (): UseTTSReturn => {
     generatedTTS,
     fetchTTS,
     generateTTS,
+    deleteTTS,
     resetTTS,
   };
 };

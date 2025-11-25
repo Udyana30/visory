@@ -9,8 +9,9 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
-  login: (credentials: LoginCredentials) => Promise<{ success: boolean; message?: string }>;
-  register: (data: RegisterData) => Promise<{ success: boolean; message?: string }>;
+  login: (credentials: LoginCredentials, autoRedirect?: boolean) => Promise<{ success: boolean; message?: string }>;
+  register: (data: RegisterData, autoRedirect?: boolean) => Promise<{ success: boolean; message?: string }>;
+  googleLogin: (token: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   updateUser: (user: User) => void;
   isAuthenticated: boolean;
@@ -40,7 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = async (credentials: LoginCredentials, autoRedirect: boolean = true) => {
     try {
       setLoading(true);
       setError(null);
@@ -48,7 +49,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await authService.login(credentials);
       if (response.user) {
         setUser(response.user);
-        router.push('/home');
+        if (autoRedirect) {
+          router.push('/home');
+        }
         return { success: true };
       }
 
@@ -62,7 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (data: RegisterData) => {
+  const register = async (data: RegisterData, autoRedirect: boolean = true) => {
     try {
       setLoading(true);
       setError(null);
@@ -70,13 +73,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await authService.register(data);
       if (response.user) {
         setUser(response.user);
-        router.push('/login');
+        if (autoRedirect) {
+          router.push('/login');
+        }
         return { success: true };
       }
 
       return { success: false, message: 'Registration failed' };
     } catch (err: any) {
       const message = err.response?.data?.message || 'Registration failed. Please try again.';
+      setError(message);
+      return { success: false, message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const googleLogin = async (token: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await authService.googleLogin(token);
+      
+      if (response.user) {
+        setUser(response.user);
+        return { success: true };
+      }
+
+      return { success: false, message: 'Google login failed' };
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Google login failed.';
       setError(message);
       return { success: false, message };
     } finally {
@@ -101,6 +128,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     error,
     login,
     register,
+    googleLogin,
     logout,
     updateUser,
     isAuthenticated: !!user,

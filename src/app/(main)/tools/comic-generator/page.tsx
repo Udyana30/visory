@@ -1,26 +1,31 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Bell, User } from 'lucide-react';
-import { ComicOnboarding } from './components/ComicOnboarding';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ComicOnboarding } from './sections/ComicOnboarding';
 import { ComicOverview } from './sections/ComicOverview';
 import { CharacterSetup } from './sections/CharacterSetup';
 import { SceneVisualization } from './sections/SceneVisualization';
 import { ComicEditor } from './sections/ComicEditor';
+import { ComicReview } from './sections/ComicReview';
+import TopBar from '@/components/layout/TopBar';
 import { LoadingModal } from '@/components/ui/LoadingModal';
 import { SuccessModal } from '@/components/ui/SuccessModal';
-import { Project, FormData, Character } from '@/types/comic';
-import { SceneVisualization as SceneVisualizationType } from '@/types/scene';
+import { Project, FormData, Character } from '@/app/(main)/tools/comic-generator/types/comic';
+import { SceneVisualization as SceneVisualizationType } from '@/app/(main)/tools/comic-generator/types/scene';
 import { 
   ART_STYLES, 
   TIMELINE_STEPS, 
   DUMMY_CHARACTERS 
-} from '@/lib/comic';
-import { useComicProject } from '@/hooks/useComic';
-import { getPageSize, getArtStyle } from '@/lib/comicUtils';
+} from '@/app/(main)/tools/comic-generator/lib/comic';
+import { useComicProject } from '@/hooks/comic/useComic';
+import { useComicProjectRestore } from '@/hooks/useComicProjectRestore';
+import { getPageSize, getArtStyle } from '@/app/(main)/tools/comic-generator/lib/comicUtils';
+import { useVisualDirtyState } from '@/hooks/comic/useVisualDirtyState';
+
+const ONBOARDING_KEY = 'comic_generator_onboarding_completed';
 
 export default function ComicGeneratorPage() {
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedArtStyle, setSelectedArtStyle] = useState<number | null>(null);
@@ -32,6 +37,7 @@ export default function ComicGeneratorPage() {
   const [currentProjectId, setCurrentProjectId] = useState<number | null>(null);
   
   const { createProject, loading, error } = useComicProject();
+  const { restoredData, isRestoring, error: restoreError, hasProjectId } = useComicProjectRestore();
   
   const [characters, setCharacters] = useState<Character[]>(DUMMY_CHARACTERS);
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([]);
@@ -43,37 +49,103 @@ export default function ComicGeneratorPage() {
     pageSize: '',
   });
 
+  const { dirtyPageIds, markPageAsDirty, markPageAsClean } = useVisualDirtyState();
+
   useEffect(() => {
-    const hasSeenOnboarding = typeof window !== 'undefined' 
-      ? localStorage.getItem('comic_onboarding_seen')
-      : null;
-    if (!hasSeenOnboarding) {
-      setShowOnboarding(true);
-    }
+    const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY);
+    setShowOnboarding(!hasCompletedOnboarding);
   }, []);
 
   useEffect(() => {
     if (error) {
+      console.error('Comic project error:', error);
       alert(`Error: ${error.message}`);
     }
   }, [error]);
+
+  useEffect(() => {
+    if (restoreError) {
+      console.error('Restore error:', restoreError);
+      alert(`Restore Error: ${restoreError}`);
+    }
+  }, [restoreError]);
+
+  useEffect(() => {
+    if (hasProjectId && restoredData.project && !isRestoring) {
+      const { project, characters: restoredChars, scenes: restoredScenes } = restoredData;
+
+      setFormData({
+        comicName: project.name,
+        genre: '',
+        pageSize: `${project.page_size.width}x${project.page_size.height}`,
+      });
+
+      const artStyleIndex = ART_STYLES.findIndex(
+        style => style.name.toLowerCase() === project.art_style.toLowerCase()
+      );
+      setSelectedArtStyle(artStyleIndex !== -1 ? artStyleIndex : null);
+
+      if (restoredChars.length > 0) {
+        const transformedChars: Character[] = restoredChars.map(char => ({
+          id: char.id,
+          name: char.name,
+          gender: char.type,
+          age: 'Adult',
+          style: project.art_style,
+          imageUrl: char.preview_url,
+          appearancePrompt: char.prompt,
+          clothingPrompt: char.clothing_prompt,
+          negativePrompt: char.negative_prompt,
+        }));
+        
+        setCharacters(transformedChars);
+        setSelectedCharacterIds(restoredChars.map(c => c.id));
+      }
+
+      if (restoredScenes.length > 0) {
+        const transformedScenes: SceneVisualizationType[] = restoredScenes.map(scene => ({
+          id: scene.id,
+          prompt: scene.prompt,
+          aspectRatio: scene.aspect_ratio,
+          shotType: scene.shot_type,
+          shotSize: scene.shot_size,
+          shotAngle: scene.shot_angle,
+          lighting: scene.lighting,
+          mood: scene.mood,
+          composition: scene.composition,
+          characters: scene.character_ids,
+          imageUrl: scene.image_url,
+          negativePrompt: scene.negative_prompt,
+        }));
+        
+        setScenes(transformedScenes);
+      }
+
+      setCurrentProjectId(project.id);
+      setProjectCreated(true);
+      setCurrentTimelineStep(0);
+    }
+  }, [hasProjectId, restoredData, isRestoring]);
+
+  const completeOnboarding = () => {
+    localStorage.setItem(ONBOARDING_KEY, 'true');
+    setShowOnboarding(false);
+  };
 
   const handleOnboardingNext = () => {
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     } else {
-      setShowOnboarding(false);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('comic_onboarding_seen', 'true');
-      }
+      completeOnboarding();
     }
   };
 
   const handleOnboardingSkip = () => {
-    setShowOnboarding(false);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('comic_onboarding_seen', 'true');
-    }
+    completeOnboarding();
+  };
+
+  const handleOnboardingStepChange = (step: number) => {
+    setCurrentStep(step);
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -167,7 +239,7 @@ export default function ComicGeneratorPage() {
   };
 
   const handleNextStep = () => {
-    if (!isFormValid()) return;
+    if (!isFormValid() && currentTimelineStep < 3) return;
     
     if (currentTimelineStep < TIMELINE_STEPS.length - 1) {
       setCurrentTimelineStep(prev => prev + 1);
@@ -193,12 +265,28 @@ export default function ComicGeneratorPage() {
     }
   };
 
+  const mappedVisualizations = useMemo(() => {
+    return scenes.map(scene => ({ ...scene, sceneId: scene.id }));
+  }, [scenes]);
+
+  if (showOnboarding === null || isRestoring) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto mb-4" />
+          {isRestoring && <p className="text-gray-600">Loading project...</p>}
+        </div>
+      </div>
+    );
+  }
+
   if (showOnboarding) {
     return (
       <ComicOnboarding
         currentStep={currentStep}
         onNext={handleOnboardingNext}
         onSkip={handleOnboardingSkip}
+        onStepChange={handleOnboardingStepChange}
       />
     );
   }
@@ -255,14 +343,28 @@ export default function ComicGeneratorPage() {
       case 3:
         return (
           <ComicEditor
-            visualizations={scenes.map(scene => ({ ...scene, sceneId: scene.id }))}
+            visualizations={mappedVisualizations}
             projectId={currentProjectId}
             onBack={() => setCurrentTimelineStep(2)}
             onNext={handleNextStep}
+            projectName={formData.comicName}
+            onPageModified={markPageAsDirty}
+          />
+        );
+      case 4:
+        return (
+          <ComicReview
+            projectId={currentProjectId}
+            projectName={formData.comicName}
+            onBack={() => setCurrentTimelineStep(3)}
+            currentTimelineStep={currentTimelineStep}
+            onStepClick={handleTimelineStepClick}
+            dirtyPageIds={dirtyPageIds}
+            onPreviewGenerated={markPageAsClean}
           />
         );
       default:
-        return <p>Section not implemented yet.</p>;
+        return null;
     }
   };
 
@@ -279,49 +381,20 @@ export default function ComicGeneratorPage() {
         onClose={handleSuccessModalClose}
       />
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="hidden md:block mb-10">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4 flex-1">
-              <h1 className="text-3xl font-bold text-gray-900 whitespace-nowrap">
-                Comic Generator
-              </h1>
-              <div className="h-8 w-px bg-gray-400"></div>
-              <p className="text-sm text-gray-700">
-                Turn your ideas into visuals. From lifelike scenes to <br />
-                creative comic art, make anything you imagine.
-              </p>
-            </div>
-            <div className="flex items-center gap-3 ml-6">
-              <button className="p-2.5 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                <Bell size={20} className="text-gray-600" />
-              </button>
-              <button className="p-2.5 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                <User size={20} className="text-gray-600" />
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div className="md:hidden mb-10">
-          <div className="flex items-center justify-between mb-3">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Comic Generator
-            </h1>
-            <div className="flex items-center gap-3">
-              <button className="p-2.5 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                <Bell size={20} className="text-gray-600" />
-              </button>
-              <button className="p-2.5 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                <User size={20} className="text-gray-600" />
-              </button>
-            </div>
-          </div>
-          <p className="text-sm text-gray-600">
-            Turn your ideas into visuals. From lifelike scenes to creative comic art, make anything you imagine.
-          </p>
-        </div>
+      <TopBar 
+        showSearch={false}
+        showUpgrade={true}
+        showNotifications={true}
+        pageTitle="Comic Generator"
+        pageSubtitle={
+          <>
+            Turn your ideas into visuals. From lifelike scenes to <br />
+            creative comic art, make anything you imagine.
+          </>
+        }
+      />
 
+      <div className="px-15 mx-auto">
         {renderCurrentSection()}
       </div>
     </div>

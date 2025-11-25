@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, AlertCircle, RefreshCw, Wand2 } from 'lucide-react';
 import { TimelineProgress } from '../components/TimelineProgress';
 import { SceneCard } from '../components/visualization/SceneCard';
-import { Character } from '@/types/comic';
-import { SceneVisualization as SceneVisualizationType } from '@/types/scene';
-import { DEFAULT_SCENE_DATA } from '@/lib/scene';
-import { useComicProject } from '@/hooks/useComic';
+import { Character } from '@/app/(main)/tools/comic-generator/types/comic';
+import { SceneVisualization as SceneVisualizationType } from '@/app/(main)/tools/comic-generator/types/scene';
+import { DEFAULT_SCENE_DATA } from '@/app/(main)/tools/comic-generator/lib/scene';
+import { useComicProject } from '@/hooks/comic/useComic';
 import { 
   getAspectRatioValue, 
   getShotTypeValue,
@@ -15,7 +15,7 @@ import {
   getMoodValue,
   getCompositionValue,
   parseCharacterMentions 
-} from '@/lib/sceneUtils';
+} from '@/app/(main)/tools/comic-generator/lib/sceneUtils';
 
 interface SceneVisualizationProps {
   selectedCharacters: Character[];
@@ -36,15 +36,124 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
   onNext,
   onStepClick
 }) => {
-  const [isGenerating, setIsGenerating] = useState(false);
   const [generatingSceneIds, setGeneratingSceneIds] = useState<Set<string>>(new Set());
-  const { createScene, loading, error } = useComicProject();
+  const { createScene, updateScene, error: apiError } = useComicProject();
   
   const currentProgress = (currentTimelineStep / 5) * 100;
+  const isGlobalGenerating = generatingSceneIds.size > 0;
+
+  const isExistingScene = (scene: SceneVisualizationType): boolean => {
+    return Boolean(
+      scene.imageUrl && 
+      !scene.id.startsWith('temp_') && 
+      !isNaN(parseInt(scene.id, 10))
+    );
+  };
+
+  const prepareSceneData = (scene: SceneVisualizationType) => {
+    const standardIds: number[] = [];
+    const customIds: number[] = [];
+
+    scene.characters.forEach(charId => {
+      const char = selectedCharacters.find(c => c.id === charId);
+      if (!char) return;
+
+      const numericId = parseInt(char.id, 10);
+      if (isNaN(numericId)) return;
+
+      const isCustom = char.gender?.toLowerCase() === 'custom' || char.age === 'Custom';
+
+      if (isCustom) {
+        customIds.push(numericId);
+      } else {
+        standardIds.push(numericId);
+      }
+    });
+
+    const formattedPrompt = parseCharacterMentions(scene.prompt, scene.characters, selectedCharacters);
+
+    return {
+      character_ids: standardIds.length > 0 ? standardIds : undefined,
+      custom_ids: customIds.length > 0 ? customIds : undefined,
+      background_id: null,
+      aspect_ratio: getAspectRatioValue(scene.aspectRatio),
+      shot_type: getShotTypeValue(scene.shotType),
+      shot_size: getShotSizeValue(scene.shotSize),
+      shot_angle: getShotAngleValue(scene.shotAngle),
+      lighting: getLightingValue(scene.lighting),
+      mood: getMoodValue(scene.mood),
+      composition: getCompositionValue(scene.composition),
+      prompt: formattedPrompt,
+      negative_prompt: scene.negativePrompt || 'blurry, low quality, distorted',
+      project_id: projectId!
+    };
+  };
+
+  const updateLocalScene = (index: number, response: any) => {
+    const updatedScenes = scenes.map((s, i) => {
+      if (i === index) {
+        return {
+          ...s,
+          id: response.id.toString(),
+          imageUrl: response.image_url,
+          characters: s.characters, // Keep local selection state
+          aspectRatio: s.aspectRatio,
+          shotType: s.shotType,
+          shotSize: s.shotSize,
+          shotAngle: s.shotAngle,
+          lighting: s.lighting,
+          mood: s.mood,
+          composition: s.composition,
+        };
+      }
+      return s;
+    });
+    
+    onScenesChange(updatedScenes);
+  };
+
+  const generateSingleScene = async (scene: SceneVisualizationType, index: number) => {
+    if (!projectId) {
+      alert('Project ID is required to generate scene');
+      return;
+    }
+
+    if (!scene.prompt.trim()) {
+      alert('Scene description is required');
+      return;
+    }
+
+    setGeneratingSceneIds(prev => new Set(prev).add(scene.id));
+
+    try {
+      const sceneData = prepareSceneData(scene);
+      const shouldUpdate = isExistingScene(scene);
+      
+      let response;
+      if (shouldUpdate) {
+        const sceneId = parseInt(scene.id, 10);
+        response = await updateScene(sceneId, sceneData);
+      } else {
+        response = await createScene(sceneData);
+      }
+
+      if (response) {
+        updateLocalScene(index, response);
+      }
+    } catch (err) {
+      console.error('Failed to generate scene:', err);
+    } finally {
+      setGeneratingSceneIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(scene.id);
+        return newSet;
+      });
+    }
+  };
 
   const handleAddScene = () => {
     const newScene: SceneVisualizationType = {
-      id: Date.now().toString(),
+      id: `temp_${Date.now()}`,
       ...DEFAULT_SCENE_DATA
     };
     onScenesChange([...scenes, newScene]);
@@ -66,74 +175,8 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
     onScenesChange(updatedScenes);
   };
 
-  const generateSingleScene = async (scene: SceneVisualizationType, index: number) => {
-    if (!projectId) {
-      alert('Project ID is required to generate scene');
-      return;
-    }
-
-    if (!scene.prompt.trim()) {
-      alert('Scene description is required');
-      return;
-    }
-
-    setGeneratingSceneIds(prev => new Set(prev).add(scene.id));
-
-    try {
-      const characterIds = scene.characters
-        .map(charId => {
-          const char = selectedCharacters.find(c => c.id === charId);
-          return char ? parseInt(char.id) : null;
-        })
-        .filter((id): id is number => id !== null);
-
-      const formattedPrompt = parseCharacterMentions(scene.prompt, scene.characters);
-
-      const sceneData = {
-        character_ids: characterIds,
-        background_id: null,
-        aspect_ratio: getAspectRatioValue(scene.aspectRatio),
-        shot_type: getShotTypeValue(scene.shotType),
-        shot_size: getShotSizeValue(scene.shotSize),
-        shot_angle: getShotAngleValue(scene.shotAngle),
-        lighting: getLightingValue(scene.lighting),
-        mood: getMoodValue(scene.mood),
-        composition: getCompositionValue(scene.composition),
-        prompt: formattedPrompt,
-        negative_prompt: 'blurry, low quality, distorted',
-        project_id: projectId
-      };
-
-      if (sceneData.character_ids.length === 0) {
-        delete (sceneData as any).character_ids;
-      }
-
-      console.log('📤 Sending scene data:', sceneData);
-
-      const response = await createScene(sceneData);
-
-      if (response) {
-        const updatedScenes = scenes.map((s, i) =>
-          i === index ? { ...s, imageUrl: response.image_url } : s
-        );
-        onScenesChange(updatedScenes);
-      }
-    } catch (err) {
-      console.error('Failed to generate scene:', err);
-    } finally {
-      setGeneratingSceneIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(scene.id);
-        return newSet;
-      });
-    }
-  };
-
-  const handleGenerateScenes = async () => {
-    if (!projectId) {
-      alert('Project ID is required to generate scenes');
-      return;
-    }
+  const handleGenerateAll = async () => {
+    if (!projectId) return;
 
     const invalidScenes = scenes.filter(scene => !scene.prompt.trim());
     if (invalidScenes.length > 0) {
@@ -141,26 +184,15 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
       return;
     }
 
-    setIsGenerating(true);
-
+    // Generate sequentially to avoid overwhelming the backend
     for (const [index, scene] of scenes.entries()) {
       await generateSingleScene(scene, index);
     }
-
-    setIsGenerating(false);
-  };
-
-  const handleGenerateAgain = async () => {
-    const clearedScenes = scenes.map(scene => ({
-      ...scene,
-      imageUrl: undefined
-    }));
-    onScenesChange(clearedScenes);
-    await handleGenerateScenes();
   };
 
   const hasGeneratedScenes = scenes.some(scene => scene.imageUrl);
   const canGenerate = scenes.length > 0 && scenes.every(scene => scene.prompt.trim() !== '');
+  const generatedCount = scenes.filter(s => s.imageUrl).length;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -171,6 +203,7 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
             <button
               onClick={handleAddScene}
               className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition"
+              disabled={isGlobalGenerating}
             >
               <Plus className="w-5 h-5" />
               Add Scene
@@ -181,40 +214,31 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
           </p>
         </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-sm text-red-600 font-medium">Error:</p>
-            <p className="text-sm text-red-700 mt-1">{error.message}</p>
-          </div>
-        )}
-
-        {isGenerating && (
-          <div className="bg-white rounded-xl shadow-sm p-8">
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="w-16 h-16 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mb-4"></div>
-              <p className="text-lg font-semibold text-gray-700">Generating scenes...</p>
-              <p className="text-sm text-gray-500 mt-2">This may take a moment</p>
+        {apiError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm text-red-700 font-medium">Generation Error</p>
+              <p className="text-sm text-red-600 mt-1">{apiError.message}</p>
             </div>
           </div>
         )}
 
-        {!isGenerating && scenes.length === 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-12">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Plus className="w-10 h-10 text-teal-600" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Scenes Yet</h3>
-              <p className="text-gray-600 mb-6">
-                Start by adding your first scene to begin building your comic story
-              </p>
-              <button
-                onClick={handleAddScene}
-                className="px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition"
-              >
-                Add Your First Scene
-              </button>
+        {scenes.length === 0 && (
+          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+            <div className="w-20 h-20 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Plus className="w-10 h-10 text-teal-600" />
             </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Scenes Yet</h3>
+            <p className="text-gray-600 mb-6">
+              Start by adding your first scene to begin building your comic story.
+            </p>
+            <button
+              onClick={handleAddScene}
+              className="px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition"
+            >
+              Add Your First Scene
+            </button>
           </div>
         )}
 
@@ -243,15 +267,25 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
 
         {!hasGeneratedScenes ? (
           <button
-            onClick={handleGenerateScenes}
-            disabled={!canGenerate || isGenerating || !projectId}
-            className={`w-full py-3 rounded-lg font-medium transition ${
-              canGenerate && !isGenerating && projectId
+            onClick={handleGenerateAll}
+            disabled={!canGenerate || isGlobalGenerating || !projectId}
+            className={`w-full py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
+              canGenerate && !isGlobalGenerating && projectId
                 ? 'bg-teal-600 text-white hover:bg-teal-700'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {isGenerating ? 'Generating...' : 'Generate All Scenes'}
+            {isGlobalGenerating ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="w-4 h-4" />
+                Generate All Scenes
+              </>
+            )}
           </button>
         ) : (
           <>
@@ -262,39 +296,53 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
               Comic Editor
             </button>
             <button
-              onClick={handleGenerateAgain}
-              disabled={isGenerating || !projectId}
-              className="w-full py-3 rounded-lg font-medium transition bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={handleGenerateAll}
+              disabled={isGlobalGenerating || !projectId}
+              className="w-full py-3 rounded-lg font-medium transition bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isGenerating ? 'Generating...' : 'Generate Again'}
+              {isGlobalGenerating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                'Regenerate All'
+              )}
             </button>
           </>
         )}
 
         {scenes.length > 0 && (
-          <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">Total Scenes</span>
               <span className="font-semibold text-gray-900">{scenes.length}</span>
             </div>
             <div className="flex items-center justify-between text-sm mt-2">
               <span className="text-gray-600">Generated</span>
-              <span className="font-semibold text-gray-900">
-                {scenes.filter(s => s.imageUrl).length}
-              </span>
+              <span className="font-semibold text-gray-900">{generatedCount}</span>
             </div>
             {selectedCharacters.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-gray-200">
-                <p className="text-xs text-gray-600 mb-2">Selected Characters:</p>
-                <div className="flex gap-2">
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Active Characters
+                </p>
+                <div className="flex flex-col gap-2">
                   {selectedCharacters.map(char => (
-                    <div key={char.id} className="flex items-center gap-1.5">
+                    <div key={char.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-50">
                       <img
                         src={char.imageUrl}
                         alt={char.name}
-                        className="w-6 h-6 rounded-full object-cover"
+                        className="w-8 h-8 rounded-full object-cover ring-1 ring-gray-200"
                       />
-                      <span className="text-xs font-medium text-gray-700">{char.name}</span>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-sm font-medium text-gray-700 truncate">
+                          {char.name}
+                        </span>
+                        <span className="text-[10px] text-gray-500">
+                          {char.gender === 'Custom' || char.age === 'Custom' ? 'Custom Ref' : 'AI Generated'}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>

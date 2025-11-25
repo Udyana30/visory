@@ -1,24 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Info, Save, Clock } from 'lucide-react';
+import { Info, Upload } from 'lucide-react';
 import { DndProvider } from '../components/editor/DndProvider';
 import { EditorToolbar } from '../components/editor/EditorToolbar';
 import { EditorCanvas } from '../components/editor/EditorCanvas';
-import { PropertiesPanel } from '../components/editor/PropertiesPanel';
+import { PropertiesPanel } from '../components/editor/properties/PropertiesPanel';
 import { ImageGallery } from '../components/editor/ImageGallery';
 import { PagesSidebar } from '../components/editor/PagesSidebar';
 import { SaveModal } from '../components/editor/SaveModal';
-import { ExportModal } from '../components/editor/ExportModal';
-import { ComicPage, ComicPanel, SpeechBubble, SceneVisualization } from '@/types/editor';
+import { ComicPage, ComicPanel, SpeechBubble, SceneVisualization } from '@/app/(main)/tools/comic-generator/types/editor';
 import { 
-  createEmptyPage, 
+  createEmptyPage,
   createPanelsFromLayout, 
   clonePages, 
-  findBubbleInPage,
   createDefaultBubble 
-} from '@/lib/editorUtils';
-import { usePagePersistence } from '@/hooks/usePagePersistence';
-import { useComicExport } from '@/hooks/useComicExport';
-import { ExportFormat } from '@/services/comicExportService';
+} from '@/app/(main)/tools/comic-generator/lib/editorUtils';
+import { useComicPages } from '@/hooks/comic/useComicPages';
+import { usePagePersistence } from '@/hooks/comic/usePagePersistence';
 
 interface ComicEditorProps {
   visualizations: SceneVisualization[];
@@ -26,37 +23,27 @@ interface ComicEditorProps {
   projectName?: string;
   onBack: () => void;
   onNext: () => void;
+  onPageModified: (pageId: number) => void;
 }
 
 export const ComicEditor: React.FC<ComicEditorProps> = ({
   visualizations,
   projectId,
-  projectName = 'Untitled Comic',
   onBack,
-  onNext
+  onNext,
+  onPageModified
 }) => {
-  const [pages, setPages] = useState<ComicPage[]>(() => {
-    if (visualizations.length === 0) {
-      return [createEmptyPage()];
-    }
-    
-    return visualizations
-      .filter(viz => viz.imageUrl)
-      .map((viz, index) => ({
-        id: `page-${index + 1}`,
-        layout: 'single' as const,
-        backgroundColor: '#ffffff',
-        panels: [{
-          id: `panel-${index}-0`,
-          imageUrl: viz.imageUrl || '',
-          x: 0,
-          y: 0,
-          width: 100,
-          height: 100,
-          rotation: 0,
-          bubbles: []
-        }]
-      }));
+  const {
+    pages,
+    setPages,
+    isLoading: isPagesLoading,
+    error: pagesError,
+    createNewPage,
+    deletePage: deletePageFromBackend,
+    reorderPages,
+  } = useComicPages({
+    projectId,
+    visualizations
   });
 
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
@@ -64,384 +51,280 @@ export const ComicEditor: React.FC<ComicEditorProps> = ({
   const [selectedBubbleId, setSelectedBubbleId] = useState<string | null>(null);
   const [selectedPanelId, setSelectedPanelId] = useState<string | null>(null);
   const [zoom, setZoom] = useState(0.8);
-  const [history, setHistory] = useState<ComicPage[][]>([clonePages(pages)]);
+  const [history, setHistory] = useState<ComicPage[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(0);
-  const [showExportModal, setShowExportModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
   const {
-    savePage,
-    loadPage,
+    saveDirtyPages,
+    saveAllPages,
+    markPageAsDirty,
     isSaving,
-    isLoading,
-    lastSaved,
-    saveError
+    isAutoSaving,
+    saveError,
+    hasDirtyPages
   } = usePagePersistence({
     projectId,
-    currentPageIndex,
     pages,
   });
 
-  const {
-    exportComic,
-    isExporting,
-    exportProgress,
-    exportError
-  } = useComicExport();
-
-  const currentPage = pages[currentPageIndex] || createEmptyPage();
+  const currentPage = pages[currentPageIndex] || createEmptyPage(1);
 
   useEffect(() => {
-    const initializePage = async () => {
-      if (!projectId) return;
+    if (pages.length > 0 && history.length === 0) {
+      setHistory([clonePages(pages)]);
+      setHistoryIndex(0);
+    }
+  }, [pages.length, history.length]);
 
-      const loadedPage = await loadPage(currentPageIndex);
-      if (loadedPage) {
-        const newPages = [...pages];
-        newPages[currentPageIndex] = loadedPage;
-        setPages(newPages);
-      }
-    };
-
-    initializePage();
-  }, [currentPageIndex, projectId]);
+  const triggerVisualDirty = () => {
+    if (currentPage?.id) {
+      onPageModified(currentPage.id);
+    }
+  };
 
   const addToHistory = (newPages: ComicPage[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(clonePages(newPages));
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
+    markPageAsDirty(currentPageIndex);
   };
 
-  const handleSave = async () => {
-    await savePage(currentPageIndex);
+  const handleFinish = async () => {
+    if (projectId) {
+      await saveAllPages();
+    }
+    onNext();
   };
 
-  const handlePageSelect = async (index: number) => {
-    setCurrentPageIndex(index);
-  };
-
-  const handlePageAdd = () => {
-    const newPages = [...pages, createEmptyPage()];
-    setPages(newPages);
-    addToHistory(newPages);
-    setCurrentPageIndex(newPages.length - 1);
-  };
-
-  const handlePageDelete = async (index: number) => {
-    if (pages.length === 1) return;
-    
-    const newPages = pages.filter((_, i) => i !== index);
-    setPages(newPages);
-    addToHistory(newPages);
-    
-    if (currentPageIndex >= newPages.length) {
-      setCurrentPageIndex(newPages.length - 1);
+  const handleManualSave = async () => {
+    setShowSaveSuccess(false);
+    await saveDirtyPages(false);
+    if (!saveError) {
+      setShowSaveSuccess(true);
+      setTimeout(() => setShowSaveSuccess(false), 2000);
     }
   };
 
-  const handleLayoutChange = (layout: string) => {
-    if (layout === 'custom') {
-      const newPages = pages.map((page, idx) =>
-        idx === currentPageIndex
-          ? { ...page, layout: 'custom' as const, panels: [] }
-          : page
-      );
-      setPages(newPages);
-      addToHistory(newPages);
-      setActiveTool('custom-panel');
-      setSelectedPanelId(null);
-      setSelectedBubbleId(null);
-      return;
-    }
-
-    const newPanels = createPanelsFromLayout(layout, currentPage.panels);
-    const newPages = pages.map((page, idx) =>
-      idx === currentPageIndex
-        ? { ...page, layout: layout as any, panels: newPanels }
-        : page
-    );
-    setPages(newPages);
-    addToHistory(newPages);
-    setSelectedPanelId(null);
+  const handleBubbleSelect = (id: string | null) => { 
+    setSelectedBubbleId(id); 
+    if(id) setSelectedPanelId(null); 
+  };
+  
+  const handlePanelSelect = (id: string | null) => { 
+    setSelectedPanelId(id); 
+    if(id) setSelectedBubbleId(null); 
   };
 
-  const handleCustomPanelAdd = (x: number, y: number, width: number, height: number) => {
-    const newPanel = {
-      id: `panel-${Date.now()}`,
-      imageUrl: '',
-      x,
-      y,
-      width,
-      height,
-      rotation: 0,
-      bubbles: [],
-      isCustom: true
-    };
-
-    const newPages = pages.map((page, idx) =>
-      idx === currentPageIndex
-        ? { ...page, panels: [...page.panels, newPanel] }
-        : page
-    );
-
-    setPages(newPages);
-    addToHistory(newPages);
+  const handlePageSelect = async (idx: number) => { 
+    if (currentPageIndex === idx) return; 
+    if(projectId && hasDirtyPages) await saveDirtyPages(true); 
+    setCurrentPageIndex(idx); 
   };
 
-  const handlePanelUpdate = (updatedPanel: ComicPanel) => {
-    const newPages = pages.map((page, idx) =>
-      idx === currentPageIndex
-        ? {
-            ...page,
-            panels: page.panels.map(panel =>
-              panel.id === updatedPanel.id ? updatedPanel : panel
-            )
-          }
-        : page
-    );
-    setPages(newPages);
+  const handlePageAdd = async () => { 
+    if(projectId && hasDirtyPages) await saveDirtyPages(true); 
+    await createNewPage(); 
+    setCurrentPageIndex(pages.length); 
   };
 
-  const handlePanelUpdateComplete = () => {
-    addToHistory(pages);
+  const handlePageDelete = async (idx: number) => { 
+    if(pages.length === 1 || isDeleting) return; 
+    setIsDeleting(true); 
+    await deletePageFromBackend(idx); 
+    setIsDeleting(false); 
+    if(currentPageIndex >= pages.length - 1) setCurrentPageIndex(Math.max(0, pages.length - 2));
   };
 
-  const handlePanelSwap = (sourcePanelId: string, targetPanelId: string) => {
-    const newPages = pages.map((page, idx) => {
-      if (idx !== currentPageIndex) return page;
-
-      const sourceIndex = page.panels.findIndex(p => p.id === sourcePanelId);
-      const targetIndex = page.panels.findIndex(p => p.id === targetPanelId);
-
-      if (sourceIndex === -1 || targetIndex === -1) return page;
-
-      const newPanels = [...page.panels];
-      const sourceImageUrl = newPanels[sourceIndex].imageUrl;
-      const targetImageUrl = newPanels[targetIndex].imageUrl;
-
-      newPanels[sourceIndex] = { ...newPanels[sourceIndex], imageUrl: targetImageUrl };
-      newPanels[targetIndex] = { ...newPanels[targetIndex], imageUrl: sourceImageUrl };
-
-      return { ...page, panels: newPanels };
-    });
-
-    setPages(newPages);
-    addToHistory(newPages);
+  const handlePageReorder = async (f: number, t: number) => { 
+    await reorderPages(f, t); 
   };
 
-  const handleImageDrop = (panelId: string, imageUrl: string) => {
-    const newPages = pages.map((page, idx) =>
-      idx === currentPageIndex
-        ? {
-            ...page,
-            panels: page.panels.map(panel =>
-              panel.id === panelId ? { ...panel, imageUrl } : panel
-            )
-          }
-        : page
-    );
-    setPages(newPages);
-    addToHistory(newPages);
-  };
-
-  const handleImageUpload = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    
-    const file = files[0];
-    const imageUrl = URL.createObjectURL(file);
-    
-    const emptyPanel = currentPage.panels.find(p => !p.imageUrl);
-    if (emptyPanel) {
-      handleImageDrop(emptyPanel.id, imageUrl);
+  const handleZoomIn = () => setZoom(Math.min(2, zoom + 0.1));
+  const handleZoomOut = () => setZoom(Math.max(0.3, zoom - 0.1));
+  
+  const handleUndo = () => { 
+    if(historyIndex > 0) { 
+      setHistoryIndex(historyIndex - 1); 
+      setPages(clonePages(history[historyIndex - 1])); 
+      markPageAsDirty(currentPageIndex);
+      triggerVisualDirty();
     }
   };
 
-  const handleBubbleAdd = (panelId: string, x: number, y: number, template?: Partial<SpeechBubble>) => {
-    const newBubble: SpeechBubble = {
-      ...createDefaultBubble(x, y),
-      ...template
-    };
-
-    const newPages = pages.map((page, idx) =>
-      idx === currentPageIndex
-        ? {
-            ...page,
-            panels: page.panels.map(panel =>
-              panel.id === panelId
-                ? { ...panel, bubbles: [...panel.bubbles, newBubble] }
-                : panel
-            )
-          }
-        : page
-    );
-
-    setPages(newPages);
-    addToHistory(newPages);
-    setSelectedBubbleId(newBubble.id);
-    setSelectedPanelId(null);
-    setActiveTool('select');
+  const handleRedo = () => { 
+    if(historyIndex < history.length - 1) { 
+      setHistoryIndex(historyIndex + 1); 
+      setPages(clonePages(history[historyIndex + 1])); 
+      markPageAsDirty(currentPageIndex);
+      triggerVisualDirty();
+    }
   };
 
-  const handleBubbleUpdate = (panelId: string, updatedBubble: SpeechBubble) => {
-    const newPages = pages.map((page, idx) =>
-      idx === currentPageIndex
-        ? {
-            ...page,
-            panels: page.panels.map(panel =>
-              panel.id === panelId
-                ? {
-                    ...panel,
-                    bubbles: panel.bubbles.map(bubble =>
-                      bubble.id === updatedBubble.id ? updatedBubble : bubble
-                    )
-                  }
-                : panel
-            )
-          }
-        : page
-    );
-    setPages(newPages);
-  };
-
-  const handleBubbleUpdateComplete = (updatedBubble: SpeechBubble) => {
-    const result = findBubbleInPage(currentPage, updatedBubble.id);
-    if (!result) return;
-    handleBubbleUpdate(result.panel.id, updatedBubble);
-    addToHistory(pages);
-  };
-
-  const handleDelete = () => {
+  const handleDelete = () => { 
     if (selectedBubbleId) {
       const newPages = pages.map((page, idx) =>
         idx === currentPageIndex
-          ? {
-              ...page,
-              panels: page.panels.map(panel => ({
-                ...panel,
-                bubbles: panel.bubbles.filter(bubble => bubble.id !== selectedBubbleId)
-              }))
-            }
+          ? { ...page, bubbles: (page.bubbles || []).filter(b => b.id !== selectedBubbleId) }
           : page
       );
-
       setPages(newPages);
       addToHistory(newPages);
       setSelectedBubbleId(null);
-      return;
-    }
-
-    if (selectedPanelId) {
+      triggerVisualDirty();
+    } else if (selectedPanelId) {
       const selectedPanel = currentPage.panels.find(p => p.id === selectedPanelId);
-      
       if (selectedPanel?.imageUrl) {
         const newPages = pages.map((page, idx) =>
           idx === currentPageIndex
-            ? {
-                ...page,
-                panels: page.panels.map(panel =>
-                  panel.id === selectedPanelId ? { ...panel, imageUrl: '' } : panel
-                )
-              }
+            ? { ...page, panels: page.panels.map(p => p.id === selectedPanelId ? { ...p, imageUrl: '' } : p) }
             : page
         );
         setPages(newPages);
         addToHistory(newPages);
+        triggerVisualDirty();
       } else if (currentPage.layout === 'custom') {
         const newPages = pages.map((page, idx) =>
           idx === currentPageIndex
-            ? {
-                ...page,
-                panels: page.panels.filter(panel => panel.id !== selectedPanelId)
-              }
+            ? { ...page, panels: page.panels.filter(p => p.id !== selectedPanelId) }
             : page
         );
         setPages(newPages);
         addToHistory(newPages);
         setSelectedPanelId(null);
+        triggerVisualDirty();
       }
     }
   };
 
-  const handleUndo = () => {
-    if (historyIndex > 0) {
-      setHistoryIndex(historyIndex - 1);
-      setPages(clonePages(history[historyIndex - 1]));
-    }
+  const handleToolChange = (tool: any) => {
+    setActiveTool(tool);
+    if (tool !== 'custom-panel' && currentPage.layout !== 'custom') setSelectedPanelId(null);
+    if (tool !== 'bubble' && tool !== 'select') setSelectedBubbleId(null);
   };
 
-  const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      setHistoryIndex(historyIndex + 1);
-      setPages(clonePages(history[historyIndex + 1]));
-    }
+  const handleImageUpload = (files: FileList | null) => { 
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    const imageUrl = URL.createObjectURL(file);
+    const emptyPanel = currentPage.panels.find(p => !p.imageUrl);
+    if (emptyPanel) handleImageDrop(emptyPanel.id, imageUrl);
   };
 
-  const handleZoomIn = () => setZoom(Math.min(2, zoom + 0.1));
-  const handleZoomOut = () => setZoom(Math.max(0.3, zoom - 0.1));
-
-  const handleExport = () => {
-    setShowExportModal(true);
-  };
-
-  const handleExportConfirm = async (format: ExportFormat) => {
-    if (!projectId) {
-      alert('Project ID is required for export');
+  const handleLayoutChange = (layout: string) => { 
+    if (layout === 'custom') {
+      const newPages = pages.map((page, idx) =>
+        idx === currentPageIndex ? { ...page, layout: 'custom' as const, panels: [] } : page
+      );
+      setPages(newPages);
+      addToHistory(newPages);
+      setActiveTool('custom-panel');
+      triggerVisualDirty();
       return;
     }
-
-    const exportUrl = await exportComic(
-      projectId,
-      projectName,
-      pages,
-      format,
-      { width: 800, height: 1280 }
+    const newPanels = createPanelsFromLayout(layout, currentPage.panels);
+    const newPages = pages.map((page, idx) =>
+      idx === currentPageIndex ? { ...page, layout: layout as ComicPage['layout'], panels: newPanels } : page
     );
-
-    if (!exportError) {
-      setTimeout(() => {
-        setShowExportModal(false);
-      }, 1500);
-    }
+    setPages(newPages);
+    addToHistory(newPages);
+    triggerVisualDirty();
   };
 
-  const handleCanvasClick = () => {
-    setSelectedBubbleId(null);
+  const handleCustomPanelAdd = (x: number, y: number, width: number, height: number) => { 
+    const newPanel = {
+      id: `panel-${Date.now()}`, imageUrl: '', x, y, width, height, rotation: 0, isCustom: true
+    };
+    const newPages = pages.map((page, idx) =>
+      idx === currentPageIndex ? { ...page, panels: [...page.panels, newPanel] } : page
+    );
+    setPages(newPages);
+    addToHistory(newPages);
+    triggerVisualDirty();
+  };
+
+  const handlePanelUpdate = (updatedPanel: ComicPanel) => { 
+    const newPages = pages.map((page, idx) =>
+      idx === currentPageIndex
+        ? { ...page, panels: page.panels.map(p => p.id === updatedPanel.id ? updatedPanel : p) }
+        : page
+    );
+    setPages(newPages);
+    triggerVisualDirty();
+  };
+
+  const handlePanelUpdateComplete = () => addToHistory(pages);
+
+  const handlePanelSwap = (s: string, t: string) => { 
+    const newPages = pages.map((page, idx) => {
+      if (idx !== currentPageIndex) return page;
+      const sIdx = page.panels.findIndex(p => p.id === s);
+      const tIdx = page.panels.findIndex(p => p.id === t);
+      if (sIdx === -1 || tIdx === -1) return page;
+      const newPanels = [...page.panels];
+      const sUrl = newPanels[sIdx].imageUrl;
+      newPanels[sIdx] = { ...newPanels[sIdx], imageUrl: newPanels[tIdx].imageUrl };
+      newPanels[tIdx] = { ...newPanels[tIdx], imageUrl: sUrl };
+      return { ...page, panels: newPanels };
+    });
+    setPages(newPages);
+    addToHistory(newPages);
+    triggerVisualDirty();
+  };
+
+  const handleImageDrop = (id: string, url: string) => { 
+    const newPages = pages.map((page, idx) =>
+      idx === currentPageIndex
+        ? { ...page, panels: page.panels.map(p => p.id === id ? { ...p, imageUrl: url } : p) }
+        : page
+    );
+    setPages(newPages);
+    addToHistory(newPages);
+    triggerVisualDirty();
+  };
+
+  const handleBubbleAdd = (x: number, y: number, template?: Partial<SpeechBubble>) => { 
+    const newBubble = { ...createDefaultBubble(x, y), ...template };
+    const newPages = pages.map((page, idx) =>
+      idx === currentPageIndex ? { ...page, bubbles: [...(page.bubbles || []), newBubble] } : page
+    );
+    setPages(newPages);
+    addToHistory(newPages);
+    setSelectedBubbleId(newBubble.id);
     setSelectedPanelId(null);
-    if (activeTool === 'custom-panel') return;
     setActiveTool('select');
+    triggerVisualDirty();
   };
 
-  const handleToolChange = (tool: typeof activeTool) => {
-    setActiveTool(tool);
-    if (tool !== 'custom-panel' && currentPage.layout !== 'custom') {
-      setSelectedPanelId(null);
-    }
-    if (tool !== 'bubble' && tool !== 'select') {
-      setSelectedBubbleId(null);
-    }
+  const handleBubbleUpdate = (updatedBubble: SpeechBubble) => { 
+    const newPages = pages.map((page, idx) =>
+      idx === currentPageIndex
+        ? { ...page, bubbles: (page.bubbles || []).map(b => b.id === updatedBubble.id ? updatedBubble : b) }
+        : page
+    );
+    setPages(newPages);
+    triggerVisualDirty();
   };
 
-  const getSelectedBubble = (): SpeechBubble | null => {
-    if (!selectedBubbleId) return null;
-    const result = findBubbleInPage(currentPage, selectedBubbleId);
-    return result ? result.bubble : null;
+  const handleBubbleUpdateComplete = (updatedBubble: SpeechBubble) => { 
+    handleBubbleUpdate(updatedBubble);
+    addToHistory(pages);
   };
 
-  const getSelectedPanel = (): ComicPanel | null => {
-    if (!selectedPanelId) return null;
-    return currentPage.panels.find(p => p.id === selectedPanelId) || null;
+  const handleCanvasClick = () => { 
+    setSelectedBubbleId(null); 
+    setSelectedPanelId(null); 
+    if (activeTool !== 'custom-panel') setActiveTool('select'); 
   };
-
+  
+  const getSelectedBubble = () => (currentPage.bubbles || []).find(b => b.id === selectedBubbleId) || null;
+  const getSelectedPanel = () => currentPage.panels.find(p => p.id === selectedPanelId) || null;
   const hasNoImages = visualizations.length === 0 || visualizations.every(v => !v.imageUrl);
 
-  useEffect(() => {
-    const handleMouseUp = () => {
-      handlePanelUpdateComplete();
-    };
-
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [pages]);
+  if (isPagesLoading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
+  if (pagesError) return <div>Error: {pagesError}</div>;
 
   return (
     <DndProvider>
@@ -454,8 +337,9 @@ export const ComicEditor: React.FC<ComicEditorProps> = ({
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onDelete={handleDelete}
-          onExport={handleExport}
-          onSave={handleSave}
+          onFinish={handleFinish} 
+          onSave={handleManualSave}
+          onBack={onBack}
           canUndo={historyIndex > 0}
           canRedo={historyIndex < history.length - 1}
           zoom={zoom}
@@ -464,93 +348,52 @@ export const ComicEditor: React.FC<ComicEditorProps> = ({
         />
 
         {saveError && (
-          <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center gap-3">
-            <Info className="w-5 h-5 text-red-600 flex-shrink-0" />
-            <p className="text-sm text-red-800">
-              <strong>Save Error:</strong> {saveError}
-            </p>
-          </div>
-        )}
-
-        {lastSaved && !isSaving && (
-          <div className="bg-green-50 border-b border-green-200 px-6 py-2 flex items-center justify-center gap-2">
-            <Clock className="w-4 h-4 text-green-600" />
-            <p className="text-xs text-green-800">
-              Last saved: {lastSaved.toLocaleTimeString()}
-            </p>
+          <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center gap-3 text-red-800">
+             <Info className="w-5 h-5" /> Save Error: {saveError}
           </div>
         )}
 
         <div className="flex-1 flex overflow-hidden">
-          <div className="w-72 bg-white border-r border-gray-200 flex flex-col overflow-y-auto scrollbar-minimal">
-            <ImageGallery 
-              visualizations={visualizations}
-              onImageUpload={handleImageUpload}
-            />
-            <PagesSidebar
-              pages={pages}
-              currentPageIndex={currentPageIndex}
-              onPageSelect={handlePageSelect}
-              onPageAdd={handlePageAdd}
-              onPageDelete={handlePageDelete}
-            />
+          <div className="w-72 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+            <div className="flex-[6] overflow-y-auto scrollbar-minimal border-b border-gray-200">
+              <ImageGallery visualizations={visualizations} onImageUpload={handleImageUpload} />
+            </div>
+            <div className="flex-[4] overflow-y-hidden">
+              <PagesSidebar
+                pages={pages}
+                currentPageIndex={currentPageIndex}
+                onPageSelect={handlePageSelect}
+                onPageAdd={handlePageAdd}
+                onPageDelete={handlePageDelete}
+                onPageReorder={projectId ? handlePageReorder : undefined}
+                isLoading={isPagesLoading || isDeleting}
+              />
+            </div>
           </div>
 
           {hasNoImages ? (
             <div className="flex-1 flex items-center justify-center bg-gray-50">
-              <div className="text-center max-w-md px-6">
+               <div className="text-center max-w-md px-6">
                 <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Upload className="w-10 h-10 text-blue-600" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">No Scenes Available</h3>
-                <p className="text-gray-600 mb-6">
-                  Please generate scenes from the Scene Visualization step or upload images from your computer to start creating your comic.
-                </p>
                 <label className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer">
-                  <Upload className="w-5 h-5" />
-                  Upload Images
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => handleImageUpload(e.target.files)}
-                    className="hidden"
-                  />
+                  <Upload className="w-5 h-5" /> Upload Images
+                  <input type="file" accept="image/*" multiple onChange={(e) => handleImageUpload(e.target.files)} className="hidden" />
                 </label>
               </div>
             </div>
           ) : (
             <div className="flex-1 flex flex-col">
-              {activeTool === 'custom-panel' && currentPage.layout === 'custom' && (
-                <div className="bg-blue-50 border-b border-blue-200 px-6 py-3 flex items-center gap-3">
-                  <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                  <p className="text-sm text-blue-800">
-                    <strong>Custom Panel Mode:</strong> Click and drag on the canvas to draw custom panels. Each panel can be resized as needed.
-                  </p>
-                </div>
-              )}
-              {currentPage.layout === 'custom' && activeTool === 'select' && (
-                <div className="bg-green-50 border-b border-green-200 px-6 py-3 flex items-center gap-3">
-                  <Info className="w-5 h-5 text-green-600 flex-shrink-0" />
-                  <p className="text-sm text-green-800">
-                    <strong>Edit Mode:</strong> Click on panels to select, then drag to move or use corner handles to resize. Press Delete to remove image or panel.
-                  </p>
-                </div>
-              )}
-              {isLoading && (
-                <div className="bg-blue-50 border-b border-blue-200 px-6 py-3 flex items-center justify-center gap-3">
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent" />
-                  <p className="text-sm text-blue-800">Loading page...</p>
-                </div>
-              )}
               <EditorCanvas
                 page={currentPage}
                 zoom={zoom}
                 activeTool={activeTool}
                 selectedBubbleId={selectedBubbleId}
                 selectedPanelId={selectedPanelId}
-                onBubbleSelect={setSelectedBubbleId}
-                onPanelSelect={setSelectedPanelId}
+                onBubbleSelect={handleBubbleSelect}
+                onPanelSelect={handlePanelSelect}
                 onBubbleUpdate={handleBubbleUpdate}
                 onPanelUpdate={handlePanelUpdate}
                 onBubbleAdd={handleBubbleAdd}
@@ -566,10 +409,7 @@ export const ComicEditor: React.FC<ComicEditorProps> = ({
             selectedBubble={getSelectedBubble()}
             selectedPanel={getSelectedPanel()}
             onBubbleUpdate={handleBubbleUpdateComplete}
-            onPanelUpdate={(panel) => {
-              handlePanelUpdate(panel);
-              handlePanelUpdateComplete();
-            }}
+            onPanelUpdate={(panel) => { handlePanelUpdate(panel); handlePanelUpdateComplete(); }}
             onLayoutChange={handleLayoutChange}
             currentLayout={currentPage.layout}
             onBubbleAdd={handleBubbleAdd}
@@ -579,30 +419,11 @@ export const ComicEditor: React.FC<ComicEditorProps> = ({
           />
         </div>
 
-        <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-          <button
-            onClick={onBack}
-            className="px-6 py-2.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition font-medium"
-          >
-            Back
-          </button>
-          <button
-            onClick={onNext}
-            className="px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition font-medium"
-          >
-            Preview & Export
-          </button>
-        </div>
-
-        <SaveModal isOpen={isSaving} />
-        
-        <ExportModal
-          isOpen={showExportModal}
-          onClose={() => !isExporting && setShowExportModal(false)}
-          onExport={handleExportConfirm}
-          isExporting={isExporting}
-          exportProgress={exportProgress}
-          exportError={exportError}
+        <SaveModal 
+          isOpen={isSaving || isAutoSaving || showSaveSuccess} 
+          mode={isAutoSaving ? 'auto' : 'manual'} 
+          isSuccess={showSaveSuccess} 
+          error={saveError} 
         />
       </div>
     </DndProvider>

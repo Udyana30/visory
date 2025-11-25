@@ -1,5 +1,5 @@
 import apiClient from '../lib/apiClient';
-import { TTSRequestData, TTSResponse, TTSQueryParams } from '../types/tts';
+import { TTSRequestData, TTSResponse, TTSListResponse, TTSQueryParams } from '../types/tts';
 
 const createTTS = async (data: TTSRequestData): Promise<TTSResponse> => {
   try {
@@ -11,16 +11,16 @@ const createTTS = async (data: TTSRequestData): Promise<TTSResponse> => {
   }
 };
 
-const getTTS = async (params: TTSQueryParams = {}): Promise<TTSResponse[]> => {
+const getTTS = async (params: TTSQueryParams = {}): Promise<TTSListResponse> => {
   try {
     const queryParams = new URLSearchParams({
-      order_by: params.order_by || 'id',
-      order_dir: params.order_dir || 'asc',
+      order_by: params.order_by || 'created_at',
+      order_dir: params.order_dir || 'desc',
       page: String(params.page || 1),
       limit: String(params.limit || 10),
     });
 
-    const response = await apiClient.get<TTSResponse[]>(`/service/tts?${queryParams}`);
+    const response = await apiClient.get<TTSListResponse>(`/service/tts?${queryParams}`);
     return response.data;
   } catch (error) {
     console.error('Error in getTTS service:', error);
@@ -28,7 +28,17 @@ const getTTS = async (params: TTSQueryParams = {}): Promise<TTSResponse[]> => {
   }
 };
 
+const deleteTTS = async (id: number | string): Promise<void> => {
+  try {
+    await apiClient.delete(`/service/tts/${id}`);
+  } catch (error) {
+    console.error('Error in deleteTTS service:', error);
+    throw error;
+  }
+};
+
 export const ttsService = {
   createTTS,
   getTTS,
+  deleteTTS,
 };

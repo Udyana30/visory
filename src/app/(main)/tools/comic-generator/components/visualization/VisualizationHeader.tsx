@@ -1,5 +1,5 @@
 import React from 'react';
-import { StoryData } from '@/types/comic';
+import { StoryData } from '@/app/(main)/tools/comic-generator/types/comic';
 
 interface VisualizationHeaderProps {
   storyData: StoryData;

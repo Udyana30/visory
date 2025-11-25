@@ -34,7 +34,7 @@
     "**/*.tsx",
     "next-env.d.ts",
     ".next/types/**/*.ts"
-  ],
+, "jest.config.mjs", "src/app/(main)/layout.tsx"  ],
   "exclude": [
     "node_modules"
   ]

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
-import useComic from "@/hooks/useComic";
+import useComic from "@/hooks/comic/useComic";
 import ComicPreview from "../components/ComicPreview";
 import DialogEditor from "../components/DialogEditor";
 

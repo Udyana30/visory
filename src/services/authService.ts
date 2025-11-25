@@ -1,4 +1,5 @@
 import apiClient from '../lib/apiClient';
+import { cookies } from '../lib/cookies';
 import {
   LoginCredentials,
   RegisterData,
@@ -12,6 +13,7 @@ const authService = {
     const response = await apiClient.post<LoginResponse>('/auth/login', credentials);
 
     if (response.data.access_token) {
+      cookies.set('access_token', response.data.access_token, 7);
       localStorage.setItem('access_token', response.data.access_token);
     }
 
@@ -26,6 +28,7 @@ const authService = {
     const response = await apiClient.post<RegisterResponse>('/auth/register', userData);
 
     if (response.data.token) {
+      cookies.set('access_token', response.data.token, 7);
       localStorage.setItem('access_token', response.data.token);
     }
 
@@ -36,7 +39,25 @@ const authService = {
     return response.data;
   },
 
+  googleLogin: async (token: string): Promise<LoginResponse> => {
+    const response = await apiClient.post<LoginResponse>('/auth/google-login', {
+      id_token: token,
+    });
+
+    if (response.data.access_token) {
+      cookies.set('access_token', response.data.access_token, 7);
+      localStorage.setItem('access_token', response.data.access_token);
+    }
+
+    if (response.data.user) {
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+
+    return response.data;
+  },
+
   logout: (): void => {
+    cookies.remove('access_token');
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
   },
@@ -54,7 +75,7 @@ const authService = {
   },
 
   getToken: (): string | null => {
-    return localStorage.getItem('access_token');
+    return cookies.get('access_token') || localStorage.getItem('access_token');
   },
 
   isAuthenticated: (): boolean => {

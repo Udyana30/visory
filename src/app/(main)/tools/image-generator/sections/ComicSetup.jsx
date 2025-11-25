@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
-import useComic from "@/hooks/useComic";
+import useComic from "@/hooks/comic/useComic";
 
 export default function ComicSetup({ initialData, onComplete, onFormChange }) {
   const { createComicInit, loading } = useComic();

@@ -1,7 +1,7 @@
 import React from 'react';
 import { ComicOverviewForm } from '../components/setup/ComicOverviewForm';
 import { TimelineProgress } from '../components/TimelineProgress';
-import { FormData } from '@/types/comic';
+import { FormData } from '@/app/(main)/tools/comic-generator/types/comic';
 
 interface ComicOverviewProps {
   formData: FormData;

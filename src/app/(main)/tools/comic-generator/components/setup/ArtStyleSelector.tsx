@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check } from 'lucide-react';
-import { ART_STYLES } from '@/lib/comic';
+import { ART_STYLES } from '@/app/(main)/tools/comic-generator/lib/comic';
 
 interface ArtStyleSelectorProps {
   selectedStyle: number | null;

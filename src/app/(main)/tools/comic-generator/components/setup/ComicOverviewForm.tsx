@@ -1,8 +1,8 @@
 import React from 'react';
-import { GENRES, PAGE_SIZES } from '@/lib/comic';
+import { GENRES, PAGE_SIZES } from '@/app/(main)/tools/comic-generator/lib/comic';
 import { ArtStyleSelector } from './ArtStyleSelector';
 import { Dropdown } from './Dropdown';
-import { FormData } from '@/types/comic';
+import { FormData } from '@/app/(main)/tools/comic-generator/types/comic';
 
 interface ComicOverviewFormProps {
   formData: FormData;
@@ -18,7 +18,7 @@ export const ComicOverviewForm: React.FC<ComicOverviewFormProps> = ({
   onStyleSelect
 }) => {
   return (
-    <div className="bg-white rounded-xl shadow-sm pt-6 pb-8 px-6 sticky top-8">
+    <div className="bg-white rounded-xl shadow-sm py-10 px-10 sticky top-8">
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">Comic Overview</h2>
         <p className="text-gray-700">
