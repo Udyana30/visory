@@ -1,0 +1,113 @@
+import React, { useEffect, useRef } from 'react';
+import { useEditorActions } from '@/features/comic-generator/hooks/useEditorActions';
+import { useAutoSave } from '@/features/comic-generator/hooks/useAutoSave';
+import { useEditorShortcuts } from '@/features/comic-generator/hooks/useEditorShortcuts';
+import { EditorProvider } from '@/features/comic-generator/context/EditorContext';
+import { DndProvider } from '@/features/comic-generator/components/editor/DndProvider';
+import { EditorToolbar } from '@/features/comic-generator/components/editor/toolbar/EditorToolbar';
+import { EditorSidebar } from '@/features/comic-generator/components/editor/sidebar/EditorSidebar';
+import { EditorCanvas } from '@/features/comic-generator/components/editor/canvas/EditorCanvas';
+import { PropertiesPanel } from '@/features/comic-generator/components/editor/properties/PropertiesPanel';
+import { SaveFeedback } from '@/features/comic-generator/components/editor/feedback/SaveFeedback';
+import { SceneVisualization } from '../types/domain/scene';
+
+interface ComicEditorProps {
+  visualizations: SceneVisualization[];
+  projectId: number | null;
+  projectName?: string;
+  onBack: () => void;
+  onNext: () => void;
+  onPageModified: (pageId: number) => void;
+}
+
+const ComicEditorContent: React.FC<ComicEditorProps> = ({
+  visualizations,
+  projectId,
+  onBack,
+  onNext,
+  onPageModified
+}) => {
+  const { 
+    loadProject, 
+    saveCurrentPage, 
+    isSaving, 
+    isAutoSaving,
+    pages,
+    activePageIndex,
+    setZoom 
+  } = useEditorActions();
+  
+  const isLoadedRef = useRef(false);
+  const currentProjectIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (projectId && (!isLoadedRef.current || currentProjectIdRef.current !== projectId)) {
+      loadProject(projectId);
+      isLoadedRef.current = true;
+      currentProjectIdRef.current = projectId;
+      setZoom(0.6); 
+    }
+  }, [projectId, loadProject, setZoom]);
+
+  useEffect(() => {
+    const currentPage = pages[activePageIndex];
+    if (currentPage?.isDirty && currentPage.id && !isNaN(Number(currentPage.id))) {
+      onPageModified(Number(currentPage.id));
+    }
+  }, [pages, activePageIndex, onPageModified]);
+
+  useAutoSave(projectId);
+  useEditorShortcuts(projectId);
+
+  const handleFinish = async () => {
+    if (projectId) {
+      await saveCurrentPage(projectId);
+    }
+    onNext();
+  };
+
+  return (
+    <div className="h-[calc(100vh-140px)] flex flex-col bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="shrink-0 bg-white z-20">
+        <EditorToolbar 
+          onBack={onBack}
+          onFinish={handleFinish}
+          projectId={projectId}
+        />
+      </div>
+
+      <div className="flex-1 flex overflow-hidden">
+        <div className="shrink-0 w-72 border-r border-gray-200 bg-white z-10 h-full flex flex-col">
+          <EditorSidebar 
+            visualizations={visualizations}
+            projectId={projectId}
+          />
+        </div>
+
+        <div className="flex-1 min-w-0 relative bg-gray-100 h-full">
+           <EditorCanvas />
+        </div>
+
+        <div className="shrink-0 w-80 border-l border-gray-200 bg-white z-10 h-full flex flex-col">
+          <PropertiesPanel />
+        </div>
+      </div>
+
+      <SaveFeedback 
+        isOpen={isSaving || isAutoSaving} 
+        mode={isAutoSaving ? 'auto' : 'manual'} 
+        isSuccess={!isSaving && !isAutoSaving} 
+      />
+    </div>
+  );
+};
+
+export const ComicEditor: React.FC<ComicEditorProps> = (props) => {
+  return (
+    <EditorProvider>
+      <DndProvider>
+        <ComicEditorContent {...props} />
+      </DndProvider>
+    </EditorProvider>
+  );
+};

@@ -1,46 +1,37 @@
 import apiClient from '@/lib/apiClient';
 import { 
   CreateSceneRequest, 
-  SceneResponse 
+  SceneResponse, 
+  SceneListResponse,
+  GenerationHistoryItem 
 } from '../types/api/scene';
 
 export const sceneService = {
   create: async (data: CreateSceneRequest): Promise<SceneResponse> => {
-    const response = await apiClient.post<SceneResponse>('/service/comic/scenes/', data);
-    return response.data;
-  },
-
-  update: async (id: number, data: CreateSceneRequest): Promise<SceneResponse> => {
-    const response = await apiClient.put<SceneResponse>(
-      `/service/comic/scenes/${id}`, 
-      data
-    );
+    const response = await apiClient.post<SceneResponse>('/service/comic/scenes', data);
     return response.data;
   },
 
   getAll: async (projectId: number): Promise<SceneResponse[]> => {
-    const response = await apiClient.get<any>(
-      '/service/comic/scenes/',
-      { params: { project_id: projectId } }
-    );
+    const response = await apiClient.get<SceneListResponse>('/service/comic/scenes/', {
+      params: { project_id: projectId }
+    });
+    return response.data.scenes || [];
+  },
 
-    if (response.data?.scenes && Array.isArray(response.data.scenes)) {
-      return response.data.scenes;
-    }
+  getById: async (id: number): Promise<SceneResponse> => {
+    const response = await apiClient.get<SceneResponse>(`/service/comic/scenes/${id}`);
+    return response.data;
+  },
 
-    if (Array.isArray(response.data)) {
-      return response.data;
-    }
+  update: async (id: number, data: CreateSceneRequest): Promise<SceneResponse> => {
+    const response = await apiClient.put<SceneResponse>(`/service/comic/scenes/${id}`, data);
+    return response.data;
+  },
 
-    if (response.data?.data?.scenes && Array.isArray(response.data.data.scenes)) {
-      return response.data.data.scenes;
-    }
-
-    if (response.data?.data && Array.isArray(response.data.data)) {
-      return response.data.data;
-    }
-
-    return [];
+  getHistory: async (id: number): Promise<GenerationHistoryItem[]> => {
+    const response = await apiClient.get<GenerationHistoryItem[]>(`/service/comic/scenes/history/${id}`);
+    return response.data;
   },
 
   delete: async (id: number): Promise<void> => {
