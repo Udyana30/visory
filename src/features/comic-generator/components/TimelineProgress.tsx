@@ -1,5 +1,5 @@
 import React from 'react';
-import { TIMELINE_STEPS } from '@/app/(main)/tools/comic-generator/lib/comic';
+import { TIMELINE_STEPS } from '../constants/comic';
 
 interface TimelineProgressProps {
   currentProgress: number;

@@ -14,7 +14,6 @@ const authService = {
 
     if (response.data.access_token) {
       cookies.set('access_token', response.data.access_token, 7);
-      localStorage.setItem('access_token', response.data.access_token);
     }
 
     if (response.data.user) {
@@ -29,7 +28,6 @@ const authService = {
 
     if (response.data.token) {
       cookies.set('access_token', response.data.token, 7);
-      localStorage.setItem('access_token', response.data.token);
     }
 
     if (response.data.user) {
@@ -46,7 +44,6 @@ const authService = {
 
     if (response.data.access_token) {
       cookies.set('access_token', response.data.access_token, 7);
-      localStorage.setItem('access_token', response.data.access_token);
     }
 
     if (response.data.user) {
@@ -75,7 +72,7 @@ const authService = {
   },
 
   getToken: (): string | null => {
-    return cookies.get('access_token') || localStorage.getItem('access_token');
+    return cookies.get('access_token');
   },
 
   isAuthenticated: (): boolean => {

@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { sttService } from '@/services/sttService';
 import { ttsService } from '@/services/ttsService';
-import { comicService, ComicListResponse } from '@/services/comic/comicService';
+import { projectService as comicService } from '@/features/comic-generator/services/projectService';
+import { ComicListResponse } from '@/features/comic-generator/types/api/project';
 import { STTListResponse } from '@/types/stt';
 import { TTSListResponse } from '@/types/tts';
 import { UnifiedProject, STTProject, TTSProject, ComicProject } from '@/types/project';
@@ -27,7 +28,7 @@ export const useProjects = () => {
       ] = await Promise.all([
         sttService.getSTT({ page, limit }),
         ttsService.getTTS({ page, limit }),
-        comicService.getProjects({ page, limit })
+        comicService.getAll({ page, limit })
       ]);
 
       const sttProjects: STTProject[] = sttResponse.data.map((p) => ({
@@ -68,8 +69,9 @@ export const useProjects = () => {
       );
 
       setProjects(allProjects);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to fetch projects.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch projects.';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -86,7 +88,7 @@ export const useProjects = () => {
       } else if (projectType === 'tts') {
         await ttsService.deleteTTS(id);
       } else if (projectType === 'comic') {
-        await comicService.deleteProject(id);
+        await comicService.delete(id);
       }
 
       setProjects(prev => 
@@ -94,9 +96,10 @@ export const useProjects = () => {
       );
 
       return { success: true };
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete project';
       console.error('Error deleting project:', err);
-      throw new Error(err?.message || 'Failed to delete project');
+      throw new Error(message);
     }
   }, []);
 

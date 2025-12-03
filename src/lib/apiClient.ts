@@ -24,7 +24,7 @@ const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
     if (typeof window !== 'undefined') {
-      const token = cookies.get('access_token') || localStorage.getItem('access_token');
+      const token = cookies.get('access_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -48,21 +48,13 @@ apiClient.interceptors.request.use(
 );
 
 apiClient.interceptors.response.use(
-  (response: AxiosResponse): AxiosResponse => {
-    if (isDevelopment) {
-      console.log(`✅ ${response.status} ${response.config.url}`, {
-        data: response.data,
-      });
-    }
-    return response;
-  },
+  (response) => response,
   (error: AxiosError): Promise<never> => {
     if (error.response) {
       const { status, data } = error.response;
 
       if ((status === 401 || status === 403) && typeof window !== 'undefined') {
         cookies.remove('access_token');
-        localStorage.removeItem('access_token');
         localStorage.removeItem('user');
         
         window.location.href = '/login';
