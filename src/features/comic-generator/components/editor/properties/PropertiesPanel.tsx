@@ -1,6 +1,6 @@
 import React from 'react';
 import { SpeechBubble, ComicPanel } from '../../../types/domain/editor';
-import { useEditorActions } from '@/features/comic-generator/hooks/useEditorActions';
+import { useEditorActions } from '@/features/comic-generator/hooks/editor/useEditorActions';
 import { BubbleProperties } from './forms/BubbleProperties';
 import { PanelProperties } from './forms/PanelProperties';
 import { CanvasProperties } from './forms/CanvasProperties';

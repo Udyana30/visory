@@ -4,9 +4,10 @@ import {
   LayoutDashboard, Square, Grid2x2, Columns, Rows
 } from 'lucide-react';
 import { BUBBLE_TEMPLATES } from '@/features/comic-generator/constants/editor';
-import { useEditorActions } from '@/features/comic-generator/hooks/useEditorActions';
+import { useEditorActions } from '@/features/comic-generator/hooks/editor/useEditorActions';
 import { AccordionSection } from '../shared/AccordionSection';
 import { PropertiesHeader } from '../shared/PropertyInputs';
+import { PageLayout } from '@/features/comic-generator/types/domain/editor';
 
 type Section = 'bubbles' | 'layouts';
 
@@ -47,18 +48,19 @@ const MenuItem: React.FC<MenuItemProps> = ({ label, icon, isActive, onClick }) =
 );
 
 export const CanvasProperties: React.FC = () => {
-  const { addBubble, pages, activePageIndex } = useEditorActions();
-  const [activeSection, setActiveSection] = useState<Section>('bubbles');
+  const { addBubble, updatePageLayout, pages, activePageIndex } = useEditorActions();
+
+  const [activeSection, setActiveSection] = useState<Section>('layouts');
 
   const currentPage = pages[activePageIndex];
   const currentLayout = currentPage?.layout || 'single';
 
   const handleTemplateSelect = (template: typeof BUBBLE_TEMPLATES[0]) => {
-    addBubble(30, 30); 
+    addBubble(30, 30, template.style.type, template.style); 
   };
 
   const handleLayoutChange = (layout: string) => {
-    console.warn("Implement updatePageLayout in EditorContext for:", layout);
+    updatePageLayout(layout as PageLayout);
   };
 
   return (
@@ -66,6 +68,20 @@ export const CanvasProperties: React.FC = () => {
       <PropertiesHeader title="Page Properties" />
 
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
+        <AccordionSection
+          title="Page Layout"
+          isOpen={activeSection === 'layouts'}
+          onToggle={() => setActiveSection('layouts')}
+        >
+          <div className="space-y-1">
+            <MenuItem label="Custom Layout" icon={<LayoutDashboard className="w-4 h-4" />} isActive={currentLayout === 'custom'} onClick={() => handleLayoutChange('custom')} />
+            <MenuItem label="Single Panel" icon={<Square className="w-4 h-4" />} isActive={currentLayout === 'single'} onClick={() => handleLayoutChange('single')} />
+            <MenuItem label="Double Panel" icon={<Columns className="w-4 h-4" />} isActive={currentLayout === 'double'} onClick={() => handleLayoutChange('double')} />
+            <MenuItem label="Triple Panel" icon={<Rows className="w-4 h-4" />} isActive={currentLayout === 'triple'} onClick={() => handleLayoutChange('triple')} />
+            <MenuItem label="Quad Panel" icon={<Grid2x2 className="w-4 h-4" />} isActive={currentLayout === 'quad'} onClick={() => handleLayoutChange('quad')} />
+          </div>
+        </AccordionSection>
+
         <AccordionSection
           title="Bubble Type"
           isOpen={activeSection === 'bubbles'}
@@ -80,20 +96,6 @@ export const CanvasProperties: React.FC = () => {
                 onClick={() => handleTemplateSelect(template)}
               />
             ))}
-          </div>
-        </AccordionSection>
-
-        <AccordionSection
-          title="Page Layout"
-          isOpen={activeSection === 'layouts'}
-          onToggle={() => setActiveSection('layouts')}
-        >
-          <div className="space-y-1">
-            <MenuItem label="Custom Layout" icon={<LayoutDashboard className="w-4 h-4" />} isActive={currentLayout === 'custom'} onClick={() => handleLayoutChange('custom')} />
-            <MenuItem label="Single Panel" icon={<Square className="w-4 h-4" />} isActive={currentLayout === 'single'} onClick={() => handleLayoutChange('single')} />
-            <MenuItem label="Double Panel" icon={<Columns className="w-4 h-4" />} isActive={currentLayout === 'double'} onClick={() => handleLayoutChange('double')} />
-            <MenuItem label="Triple Panel" icon={<Rows className="w-4 h-4" />} isActive={currentLayout === 'triple'} onClick={() => handleLayoutChange('triple')} />
-            <MenuItem label="Quad Panel" icon={<Grid2x2 className="w-4 h-4" />} isActive={currentLayout === 'quad'} onClick={() => handleLayoutChange('quad')} />
           </div>
         </AccordionSection>
       </div>

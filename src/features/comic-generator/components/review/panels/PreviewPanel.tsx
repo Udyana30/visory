@@ -4,7 +4,7 @@ import { ComicPage } from '@/features/comic-generator/types/domain/editor';
 
 interface PreviewPanelProps {
   pages: ComicPage[];
-  previews: Record<number, string>;
+  previews: Record<string, string>;
 }
 
 export const PreviewPanel: React.FC<PreviewPanelProps> = ({ pages, previews }) => {
@@ -12,7 +12,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ pages, previews }) =
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   const getPreviewUrl = (page: ComicPage) => {
-    return previews[Number(page.id)] || page.previewUrl;
+    return previews[page.id] || page.previewUrl;
   };
 
   const handleZoomIn = () => setZoom(z => Math.min(2, z + 0.1));

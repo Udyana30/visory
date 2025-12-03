@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import { ComicGenerator } from '@/features/comic-generator/ComicGenerator';
 
 export const metadata: Metadata = {
-  title: 'Comic Generator | visory',
+  title: 'visory | Comic Generator',
   description: 'Create professional comics with AI-powered tools. Customize characters, scenes, and layouts effortlessly.',
 };
 

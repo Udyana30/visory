@@ -1,14 +1,15 @@
 import React, { useEffect, useRef } from 'react';
-import { useEditorActions } from '@/features/comic-generator/hooks/useEditorActions';
-import { useAutoSave } from '@/features/comic-generator/hooks/useAutoSave';
-import { useEditorShortcuts } from '@/features/comic-generator/hooks/useEditorShortcuts';
-import { EditorProvider } from '@/features/comic-generator/context/EditorContext';
+import { useEditorActions } from '@/features/comic-generator/hooks/editor/useEditorActions';
+import { useAutoSave } from '@/features/comic-generator/hooks/editor/useAutoSave';
+import { useEditorShortcuts } from '@/features/comic-generator/hooks/editor/useEditorShortcuts';
+import { useEditor } from '@/features/comic-generator/context/EditorContext';
 import { DndProvider } from '@/features/comic-generator/components/editor/DndProvider';
 import { EditorToolbar } from '@/features/comic-generator/components/editor/toolbar/EditorToolbar';
 import { EditorSidebar } from '@/features/comic-generator/components/editor/sidebar/EditorSidebar';
 import { EditorCanvas } from '@/features/comic-generator/components/editor/canvas/EditorCanvas';
 import { PropertiesPanel } from '@/features/comic-generator/components/editor/properties/PropertiesPanel';
 import { SaveFeedback } from '@/features/comic-generator/components/editor/feedback/SaveFeedback';
+import { useUnsavedChanges } from '@/features/comic-generator/hooks/editor/useUnsavedChanges';
 import { SceneVisualization } from '../types/domain/scene';
 
 interface ComicEditorProps {
@@ -29,25 +30,38 @@ const ComicEditorContent: React.FC<ComicEditorProps> = ({
 }) => {
   const { 
     loadProject, 
-    saveCurrentPage, 
+    manualSavePage, 
+    saveAllChanges,
     isSaving, 
     isAutoSaving,
+    isSaveSuccess,
+    suppressFeedback,
     pages,
     activePageIndex,
     setZoom 
   } = useEditorActions();
+
+  const { state } = useEditor();
+  const isDirty = state.pages.some(p => p.isDirty);
   
   const isLoadedRef = useRef(false);
   const currentProjectIdRef = useRef<number | null>(null);
 
+  const { handleInterceptNavigation, isSavingAndExiting } = useUnsavedChanges(
+    isDirty,
+    () => (projectId ? saveAllChanges(projectId) : Promise.resolve())
+  );
+
   useEffect(() => {
     if (projectId && (!isLoadedRef.current || currentProjectIdRef.current !== projectId)) {
-      loadProject(projectId);
+      if (pages.length === 0) {
+        loadProject(projectId);
+      }
       isLoadedRef.current = true;
       currentProjectIdRef.current = projectId;
       setZoom(0.6); 
     }
-  }, [projectId, loadProject, setZoom]);
+  }, [projectId, loadProject, setZoom, pages.length]);
 
   useEffect(() => {
     const currentPage = pages[activePageIndex];
@@ -61,16 +75,22 @@ const ComicEditorContent: React.FC<ComicEditorProps> = ({
 
   const handleFinish = async () => {
     if (projectId) {
-      await saveCurrentPage(projectId);
+      await saveAllChanges(projectId);
     }
     onNext();
   };
+
+  const handleSafeBack = () => {
+    handleInterceptNavigation(onBack);
+  };
+
+  const shouldShowFeedback = (isSaving || isAutoSaving || isSavingAndExiting || isSaveSuccess) && !suppressFeedback;
 
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-sm">
       <div className="shrink-0 bg-white z-20">
         <EditorToolbar 
-          onBack={onBack}
+          onBack={handleSafeBack} 
           onFinish={handleFinish}
           projectId={projectId}
         />
@@ -94,9 +114,10 @@ const ComicEditorContent: React.FC<ComicEditorProps> = ({
       </div>
 
       <SaveFeedback 
-        isOpen={isSaving || isAutoSaving} 
+        isOpen={shouldShowFeedback} 
         mode={isAutoSaving ? 'auto' : 'manual'} 
-        isSuccess={!isSaving && !isAutoSaving} 
+        isSuccess={isSaveSuccess} 
+        customMessage={isSavingAndExiting ? "Saving all changes..." : undefined}
       />
     </div>
   );
@@ -104,10 +125,8 @@ const ComicEditorContent: React.FC<ComicEditorProps> = ({
 
 export const ComicEditor: React.FC<ComicEditorProps> = (props) => {
   return (
-    <EditorProvider>
-      <DndProvider>
-        <ComicEditorContent {...props} />
-      </DndProvider>
-    </EditorProvider>
+    <DndProvider>
+      <ComicEditorContent {...props} />
+    </DndProvider>
   );
 };

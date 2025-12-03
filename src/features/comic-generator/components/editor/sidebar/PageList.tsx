@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Plus } from 'lucide-react';
-import { useEditorActions } from '../../../hooks/useEditorActions';
+import { useEditorActions } from '../../../hooks/editor/useEditorActions';
 import { PageThumbnail } from './PageThumbnail';
 
 interface PageListProps {
@@ -13,7 +13,9 @@ export const PageList: React.FC<PageListProps> = ({ projectId }) => {
     activePageIndex, 
     setActivePage, 
     createPage, 
-    deletePage 
+    deletePage,
+    reorderPages,
+    savePageOrder
   } = useEditorActions();
 
   const handleAddPage = () => {
@@ -23,6 +25,16 @@ export const PageList: React.FC<PageListProps> = ({ projectId }) => {
   const handleDeletePage = (index: number) => {
     if (projectId) deletePage(projectId, index);
   };
+
+  const handleMovePage = useCallback((dragIndex: number, hoverIndex: number) => {
+    reorderPages(dragIndex, hoverIndex);
+  }, [reorderPages]);
+
+  const handleDropComplete = useCallback(() => {
+    if (projectId) {
+      savePageOrder(projectId);
+    }
+  }, [projectId, savePageOrder]);
 
   return (
     <div className="flex flex-col h-full bg-gray-50 border-t border-gray-200">
@@ -47,6 +59,8 @@ export const PageList: React.FC<PageListProps> = ({ projectId }) => {
               isActive={index === activePageIndex}
               onSelect={() => setActivePage(index)}
               onDelete={() => handleDeletePage(index)}
+              onMove={handleMovePage}
+              onDropComplete={handleDropComplete}
               canDelete={pages.length > 1}
             />
           ))}

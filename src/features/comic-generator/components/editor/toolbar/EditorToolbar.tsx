@@ -3,7 +3,7 @@ import {
   Hand, MessageSquare, Type, Image, Layout, Trash2, 
   ZoomIn, ZoomOut, Undo, Redo, Save, Square, ArrowLeft, Check
 } from 'lucide-react';
-import { useEditorActions } from '../../../hooks/useEditorActions';
+import { useEditorActions } from '../../../hooks/editor/useEditorActions';
 import { useEditor } from '../../../context/EditorContext';
 import { ToolbarButton } from './ToolbarButton';
 import { ToolbarGroup } from './ToolbarGroup';
@@ -22,13 +22,12 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 }) => {
   const { state } = useEditor();
   const {
-    setTool, undo, redo, zoomIn, zoomOut, deleteSelected, saveCurrentPage
+    setTool, undo, redo, zoomIn, zoomOut, deleteSelected, manualSavePage
   } = useEditorActions();
 
   const { activeTool, zoom, isSaving, history, pages, activePageIndex } = state;
   const canUndo = history.past.length > 0;
   const canRedo = history.future.length > 0;
-  const isCustomLayout = pages[activePageIndex]?.layout === 'custom';
 
   const tools = [
     { id: 'select', icon: Hand, label: 'Select', disabled: false },
@@ -36,7 +35,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     { id: 'text', icon: Type, label: 'Text', disabled: true },
     { id: 'image', icon: Image, label: 'Image', disabled: true },
     { id: 'layout', icon: Layout, label: 'Layout', disabled: true },
-    { id: 'custom-panel', icon: Square, label: 'Draw Panel', disabled: !isCustomLayout }
+    { id: 'custom-panel', icon: Square, label: 'Draw Panel', disabled: false }
   ];
 
   return (
@@ -77,7 +76,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => projectId && saveCurrentPage(projectId)}
+            onClick={() => projectId && manualSavePage(projectId, { silent: false })}
             disabled={isSaving}
             className="px-5 py-2.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition flex items-center gap-2 font-medium disabled:opacity-50"
           >

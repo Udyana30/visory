@@ -76,5 +76,30 @@ export interface EditorState {
   };
   isSaving: boolean;
   isAutoSaving: boolean;
+  isSaveSuccess: boolean;
+  suppressFeedback: boolean;
   lastSaved: Date | null;
+  touchedPageIds: Set<string>;
 }
+
+export type EditorAction =
+  | { type: 'INIT_PAGES'; payload: ComicPage[] }
+  | { type: 'SET_ACTIVE_PAGE'; payload: number }
+  | { type: 'ADD_PAGE'; payload: ComicPage }
+  | { type: 'DELETE_PAGE'; payload: number }
+  | { type: 'REORDER_PAGES'; payload: { oldIndex: number; newIndex: number } }
+  | { type: 'UPDATE_PAGE_LAYOUT'; payload: { pageIndex: number, layout: PageLayout, newPanels: ComicPanel[] } }
+  | { type: 'ADD_ELEMENT'; payload: ComicPanel | SpeechBubble }
+  | { type: 'UPDATE_ELEMENT'; payload: { id: string; changes: Partial<ComicPanel | SpeechBubble> } }
+  | { type: 'DELETE_ELEMENT'; payload: string }
+  | { type: 'SELECT_ELEMENT'; payload: string | null }
+  | { type: 'SET_TOOL'; payload: EditorTool }
+  | { type: 'SET_ZOOM'; payload: number }
+  | { type: 'UNDO' }
+  | { type: 'REDO' }
+  | { type: 'SET_SAVING'; payload: boolean }
+  | { type: 'SET_AUTO_SAVING'; payload: boolean }
+  | { type: 'SET_SAVE_SUCCESS'; payload: boolean }
+  | { type: 'SET_SUPPRESS_FEEDBACK'; payload: boolean }
+  | { type: 'MARK_CLEAN'; payload: number }
+  | { type: 'MARK_PREVIEWS_GENERATED' };

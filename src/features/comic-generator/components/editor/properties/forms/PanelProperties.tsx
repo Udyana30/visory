@@ -5,7 +5,7 @@ import {
   RotateCw, Maximize, Minimize, Crop
 } from 'lucide-react';
 import { ComicPanel } from '../../../../types/domain/editor';
-import { useEditorActions } from '@/features/comic-generator/hooks/useEditorActions';
+import { useEditorActions } from '@/features/comic-generator/hooks/editor/useEditorActions';
 import { SectionHeader, AlignButton, NumberInput, PropertiesHeader } from '../shared/PropertyInputs';
 
 interface PanelPropertiesProps {

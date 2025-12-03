@@ -1,8 +1,5 @@
 import apiClient from '@/lib/apiClient';
-import { 
-  CreateReferenceRequest, 
-  ReferenceResponse 
-} from '../types/api/reference';
+import { CreateReferenceRequest, ReferenceResponse } from '../types/api/reference';
 import { ApiResponseWrapper } from '../types/common';
 
 export const referenceService = {
@@ -15,35 +12,47 @@ export const referenceService = {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('type', type);
-
+    
     const response = await apiClient.post<ReferenceResponse>(
       `/service/comic/references/custom/${projectId}`, 
       formData,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }
+      { headers: { 'Content-Type': 'multipart/form-data' } }
     );
     return response.data;
   },
 
-  getAll: async (projectId: number): Promise<ReferenceResponse[]> => {
+  getAllByProject: async (projectId: number): Promise<ReferenceResponse[]> => {
     const response = await apiClient.get<ReferenceResponse[] | ApiResponseWrapper<ReferenceResponse[]>>(
       '/service/comic/references/',
       { params: { project_id: projectId } }
     );
+    return Array.isArray(response.data) ? response.data : response.data?.data || [];
+  },
 
-    if (Array.isArray(response.data)) {
-      return response.data;
-    }
+  getUserLibrary: async (userId: number): Promise<ReferenceResponse[]> => {
+    const response = await apiClient.get<ReferenceResponse[] | ApiResponseWrapper<ReferenceResponse[]>>(
+      '/service/comic/references/',
+      { params: { user_id: userId } }
+    );
+    return Array.isArray(response.data) ? response.data : response.data?.data || [];
+  },
 
-    if (response.data?.data && Array.isArray(response.data.data)) {
-      return response.data.data;
-    }
+  getById: async (id: number): Promise<ReferenceResponse> => {
+    const response = await apiClient.get<ReferenceResponse>(`/service/comic/references/${id}`);
+    return response.data;
+  },
 
-    return [];
+  update: async (id: number, data: CreateReferenceRequest): Promise<ReferenceResponse> => {
+    const response = await apiClient.put<ReferenceResponse>(`/service/comic/references/${id}`, data);
+    return response.data;
   },
 
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/service/comic/references/${id}`);
+  },
+
+  //NOT IMPLEMENTED YET
+  assignToProject: async (referenceId: number, projectId: number): Promise<void> => {
+    await apiClient.post(`/service/comic/references/${referenceId}/assign`, { project_id: projectId });
   }
 };

@@ -1,21 +1,21 @@
 import { useState, useCallback } from 'react';
 import { sttService } from '../services/sttService';
-import type { STTResponse } from '../types/stt';
+import type { STTCreateResponse } from '../types/stt';
 
 interface UseSTTReturn {
   isLoading: boolean;
   error: string | null;
-  result: STTResponse | null;
-  generateSTT: (formData: FormData) => Promise<STTResponse>;
+  result: STTCreateResponse | null;
+  generateSTT: (formData: FormData) => Promise<STTCreateResponse>;
   resetSTT: () => void;
 }
 
 export const useSTT = (): UseSTTReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<STTResponse | null>(null);
+  const [result, setResult] = useState<STTCreateResponse | null>(null);
 
-  const generateSTT = useCallback(async (formData: FormData): Promise<STTResponse> => {
+  const generateSTT = useCallback(async (formData: FormData): Promise<STTCreateResponse> => {
     setIsLoading(true);
     setError(null);
     setResult(null);

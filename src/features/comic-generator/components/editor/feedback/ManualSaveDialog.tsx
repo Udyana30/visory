@@ -5,9 +5,10 @@ import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 interface ManualSaveDialogProps {
   isSuccess?: boolean;
   error?: string | null;
+  message?: string;
 }
 
-export const ManualSaveDialog: React.FC<ManualSaveDialogProps> = ({ isSuccess, error }) => {
+export const ManualSaveDialog: React.FC<ManualSaveDialogProps> = ({ isSuccess, error, message }) => {
   const renderContent = () => {
     if (error) {
       return (
@@ -37,7 +38,7 @@ export const ManualSaveDialog: React.FC<ManualSaveDialogProps> = ({ isSuccess, e
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">Saved Successfully</h3>
           <p className="text-gray-600 text-center text-sm">
-            Your comic project has been saved
+            {message || "Your comic project has been saved"}
           </p>
         </motion.div>
       );
@@ -54,7 +55,7 @@ export const ManualSaveDialog: React.FC<ManualSaveDialogProps> = ({ isSuccess, e
         </div>
         <h3 className="text-xl font-bold text-gray-900 mb-2">Saving Your Work</h3>
         <p className="text-gray-600 text-center text-sm">
-          Please wait while we save your comic project...
+          {message || "Please wait while we save your comic project..."}
         </p>
         <div className="mt-6 w-full bg-gray-200 rounded-full h-2 overflow-hidden">
           <motion.div 

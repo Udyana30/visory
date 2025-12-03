@@ -1,20 +1,37 @@
 import { PageSizeDTO } from '../types/api/project';
 import { ArtStyle } from '../types/domain/project';
+import { FileText, BookOpen, Smartphone, Square, Monitor } from 'lucide-react';
 
 export const GENRES = [
   'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 
   'Horror', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller'
 ];
 
+export const LANGUAGES = [
+  { code: 'en', name: 'English', flag: '🇺🇸' },
+  { code: 'id', name: 'Indonesia', flag: '🇮🇩' },
+  { code: 'jp', name: 'Japanese', flag: '🇯🇵' },
+  { code: 'kr', name: 'Korean', flag: '🇰🇷' },
+  { code: 'es', name: 'Spanish', flag: '🇪🇸' },
+  { code: 'fr', name: 'French', flag: '🇫🇷' },
+  { code: 'de', name: 'German', flag: '🇩🇪' },
+];
+
 export const PAGE_SIZES_MAP: Record<string, PageSizeDTO> = {
-  'Standard (6.625" x 10.25")': { width: 800, height: 1240 },
-  'US Comic (6.875" x 10.4375")': { width: 825, height: 1260 },
-  'Manga (5" x 7.5")': { width: 600, height: 900 },
-  'Digital (1920 x 2880px)': { width: 1920, height: 2880 },
-  'Square (8" x 8")': { width: 960, height: 960 },
+  'Standard': { width: 800, height: 1240 },
+  'US Comic': { width: 825, height: 1260 },
+  'Manga': { width: 600, height: 900 },
+  'Digital': { width: 1920, height: 2880 },
+  'Square': { width: 960, height: 960 },
 };
 
-export const PAGE_SIZE_OPTIONS = Object.keys(PAGE_SIZES_MAP);
+export const PAGE_SIZE_DETAILS = [
+  { label: 'Standard', dimensions: '800 x 1240', icon: FileText },
+  { label: 'US Comic', dimensions: '825 x 1260', icon: BookOpen },
+  { label: 'Manga', dimensions: '600 x 900', icon: BookOpen },
+  { label: 'Digital', dimensions: '1920 x 2880', icon: Smartphone },
+  { label: 'Square', dimensions: '960 x 960', icon: Square },
+];
 
 export const ART_STYLES: ArtStyle[] = [
   { 

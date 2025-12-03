@@ -11,6 +11,8 @@ export interface ArtStyle {
 export interface ProjectFormData {
   name: string;
   genre: string;
+  language: string;
+  description: string;
   pageSizeLabel: string;
   artStyleIndex: number | null;
 }
@@ -19,6 +21,8 @@ export interface Project {
   id: string;
   name: string;
   genre?: string;
+  language?: string;
+  description?: string;
   artStyle: string;
   pageSize: PageSizeDTO;
   createdAt: Date;

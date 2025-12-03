@@ -9,6 +9,9 @@ export interface CreateProjectRequest {
   name: string;
   page_size: PageSizeDTO;
   art_style: string;
+  description: string;
+  genre: string;
+  language: string;
 }
 
 export interface ProjectResponse {
@@ -16,6 +19,9 @@ export interface ProjectResponse {
   name: string;
   page_size: PageSizeDTO;
   art_style: string;
+  description?: string;
+  genre?: string;
+  language?: string;
   created_at: string;
   updated_at: string;
 }

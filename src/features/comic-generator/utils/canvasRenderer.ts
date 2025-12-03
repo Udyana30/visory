@@ -1,23 +1,41 @@
 import { ComicPage, ComicPanel, SpeechBubble } from '../types/domain/editor';
-import { DEFAULT_PAGE_WIDTH, DEFAULT_PAGE_HEIGHT } from '../constants/editor';
 
-const loadImage = (url: string): Promise<HTMLImageElement> => {
+const loadImage = (url: string, timeout = 5000): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = reject;
+
+    const timer = setTimeout(() => {
+      img.src = "";
+      reject(new Error('Image load timeout'));
+    }, timeout);
+
+    img.onload = () => {
+      clearTimeout(timer);
+      resolve(img);
+    };
+    
+    img.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error('Image load failed'));
+    };
+    
     img.src = url;
   });
 };
 
-const drawBubble = (ctx: CanvasRenderingContext2D, bubble: SpeechBubble) => {
+const drawBubble = (
+  ctx: CanvasRenderingContext2D, 
+  bubble: SpeechBubble, 
+  pageWidth: number, 
+  pageHeight: number
+) => {
   const { x, y, width, height, style, text } = bubble;
   
-  const absX = (x / 100) * DEFAULT_PAGE_WIDTH;
-  const absY = (y / 100) * DEFAULT_PAGE_HEIGHT;
-  const absW = (width / 100) * DEFAULT_PAGE_WIDTH;
-  const absH = (height / 100) * DEFAULT_PAGE_HEIGHT;
+  const absX = (x / 100) * pageWidth;
+  const absY = (y / 100) * pageHeight;
+  const absW = (width / 100) * pageWidth;
+  const absH = (height / 100) * pageHeight;
 
   ctx.save();
   ctx.fillStyle = style.backgroundColor;
@@ -49,13 +67,18 @@ const drawBubble = (ctx: CanvasRenderingContext2D, bubble: SpeechBubble) => {
   ctx.restore();
 };
 
-const drawPanel = async (ctx: CanvasRenderingContext2D, panel: ComicPanel) => {
+const drawPanel = async (
+  ctx: CanvasRenderingContext2D, 
+  panel: ComicPanel, 
+  pageWidth: number, 
+  pageHeight: number
+) => {
   if (!panel.imageUrl) return;
 
-  const absX = (panel.x / 100) * DEFAULT_PAGE_WIDTH;
-  const absY = (panel.y / 100) * DEFAULT_PAGE_HEIGHT;
-  const absW = (panel.width / 100) * DEFAULT_PAGE_WIDTH;
-  const absH = (panel.height / 100) * DEFAULT_PAGE_HEIGHT;
+  const absX = (panel.x / 100) * pageWidth;
+  const absY = (panel.y / 100) * pageHeight;
+  const absW = (panel.width / 100) * pageWidth;
+  const absH = (panel.height / 100) * pageHeight;
 
   try {
     const img = await loadImage(panel.imageUrl);
@@ -80,35 +103,48 @@ const drawPanel = async (ctx: CanvasRenderingContext2D, panel: ComicPanel) => {
     ctx.strokeRect(absX, absY, absW, absH);
     ctx.restore();
   } catch (error) {
-    console.error('Failed to render panel image', error);
+    ctx.save();
+    ctx.fillStyle = '#f3f4f6';
+    ctx.fillRect(absX, absY, absW, absH);
+    ctx.strokeStyle = '#d1d5db';
+    ctx.strokeRect(absX, absY, absW, absH);
+    ctx.restore();
   }
 };
 
-export const renderPageToBlob = async (page: ComicPage): Promise<Blob> => {
+export const renderPageToBlob = async (
+  page: ComicPage, 
+  width: number, 
+  height: number
+): Promise<Blob> => {
   const canvas = document.createElement('canvas');
-  canvas.width = DEFAULT_PAGE_WIDTH;
-  canvas.height = DEFAULT_PAGE_HEIGHT;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext('2d');
 
-  if (!ctx) throw new Error('Canvas context creation failed');
+  if (!ctx) throw new Error('Canvas context failed');
 
-  ctx.fillStyle = page.backgroundColor;
+  ctx.fillStyle = page.backgroundColor || '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const panels = page.elements.filter((e): e is ComicPanel => e.type === 'panel').sort((a, b) => a.zIndex - b.zIndex);
-  for (const panel of panels) {
-    await drawPanel(ctx, panel);
-  }
+  const panels = page.elements.filter((e): e is ComicPanel => e.type === 'panel')
+    .sort((a, b) => a.zIndex - b.zIndex);
+    
+  await Promise.allSettled(panels.map(panel => drawPanel(ctx, panel, width, height)));
 
-  const bubbles = page.elements.filter((e): e is SpeechBubble => e.type === 'bubble').sort((a, b) => a.zIndex - b.zIndex);
-  for (const bubble of bubbles) {
-    drawBubble(ctx, bubble);
-  }
+  const bubbles = page.elements.filter((e): e is SpeechBubble => e.type === 'bubble')
+    .sort((a, b) => a.zIndex - b.zIndex);
+    
+  bubbles.forEach(bubble => drawBubble(ctx, bubble, width, height));
 
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error('Blob conversion failed'));
-    }, 'image/png', 0.95);
+    try {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error('Canvas empty'));
+      }, 'image/png', 0.95);
+    } catch (e) {
+      reject(new Error('Canvas export failed'));
+    }
   });
 };

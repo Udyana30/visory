@@ -4,9 +4,9 @@ import {
   Bold, Italic, Underline, 
   Type, Square, Circle
 } from 'lucide-react';
-import { SpeechBubble } from '../../../../types/domain/editor';
+import { SpeechBubble } from '@/features/comic-generator/types/domain/editor';
 import { BUBBLE_TEMPLATES, FONT_FAMILIES, FONT_SIZES } from '@/features/comic-generator/constants/editor';
-import { useEditorActions } from '@/features/comic-generator/hooks/useEditorActions';
+import { useEditorActions } from '@/features/comic-generator/hooks/editor/useEditorActions';
 import { SectionHeader, StyleButton, AlignButton, PropertiesHeader } from '../shared/PropertyInputs';
 import { ColorInput } from '../shared/ColorPicker';
 
@@ -37,6 +37,20 @@ export const BubbleProperties: React.FC<BubblePropertiesProps> = ({ bubble }) =>
     }
   };
 
+  const handleTypeChange = (template: typeof BUBBLE_TEMPLATES[0]) => {
+    updateElement(bubble.id, {
+        variant: template.style.type,
+        style: {
+            ...bubble.style,
+            ...template.style,
+            backgroundColor: template.style.backgroundColor || bubble.style.backgroundColor,
+            borderColor: template.style.borderColor || bubble.style.borderColor,
+            borderWidth: template.style.borderWidth || bubble.style.borderWidth,
+            type: template.style.type
+        }
+    });
+  };
+
   return (
     <div className="h-full flex flex-col bg-white text-gray-800">
       <PropertiesHeader title="Bubble Properties" onDone={() => selectElement(null)} />
@@ -49,7 +63,7 @@ export const BubbleProperties: React.FC<BubblePropertiesProps> = ({ bubble }) =>
             {BUBBLE_TEMPLATES.map((template) => (
               <button
                 key={template.id}
-                onClick={() => handleChange('variant', template.style.type)}
+                onClick={() => handleTypeChange(template)}
                 title={template.name}
                 className={`aspect-square flex items-center justify-center rounded-lg border transition-all ${
                   bubble.variant === template.style.type

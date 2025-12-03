@@ -1,11 +1,11 @@
 import { ComicPage, ComicPanel, SpeechBubble, PageLayout } from '../types/domain/editor';
-import { PANEL_LAYOUTS, DEFAULT_BUBBLE_STYLE } from '../constants/editor';
+import { PANEL_LAYOUTS } from '../constants/editor';
 
 export const generateId = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
-  return Math.random().toString(36).substring(2, 15);
+  return `id-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 };
 
 export const createDefaultPanel = (index: number = 0): ComicPanel => ({
@@ -17,7 +17,7 @@ export const createDefaultPanel = (index: number = 0): ComicPanel => ({
   height: 100,
   rotation: 0,
   zIndex: index,
-  imageUrl: '',
+  imageUrl: undefined,
   imageScale: 1,
   imagePosition: { x: 50, y: 50 },
   isCustom: false
@@ -28,35 +28,49 @@ export const createDefaultBubble = (x: number, y: number, zIndex: number): Speec
   type: 'bubble',
   variant: 'speech',
   text: 'Double click to edit',
-  x: Math.max(0, Math.min(80, x)),
-  y: Math.max(0, Math.min(80, y)),
-  width: 20,
+  x,
+  y,
+  width: 25,
   height: 15,
   rotation: 0,
   zIndex,
-  style: { ...DEFAULT_BUBBLE_STYLE }
+  style: {
+    fontSize: 14,
+    fontFamily: 'Comic Sans MS',
+    fontWeight: 'normal',
+    fontStyle: 'normal',
+    textDecoration: 'none',
+    textAlign: 'center',
+    color: '#000000',
+    backgroundColor: '#ffffff',
+    borderColor: '#000000',
+    borderWidth: 2,
+    showTail: true
+  }
 });
 
-export const createEmptyPage = (pageNumber: number, layout: PageLayout = 'single'): ComicPage => {
-  let elements: (ComicPanel | SpeechBubble)[] = [];
+export const generatePanelsFromLayout = (layout: PageLayout): ComicPanel[] => {
+  if (layout === 'custom') return [];
   
-  if (layout !== 'custom' && PANEL_LAYOUTS[layout as keyof typeof PANEL_LAYOUTS]) {
-    const config = PANEL_LAYOUTS[layout as keyof typeof PANEL_LAYOUTS];
-    elements = config.map((cfg: any, index: number) => ({
-      ...createDefaultPanel(index),
-      x: cfg.x,
-      y: cfg.y,
-      width: cfg.width,
-      height: cfg.height
-    }));
-  }
+  const layoutConfig = PANEL_LAYOUTS[layout] || PANEL_LAYOUTS.single;
+  
+  return layoutConfig.map((config, index) => ({
+    ...createDefaultPanel(index),
+    x: config.x,
+    y: config.y,
+    width: config.width,
+    height: config.height,
+    isCustom: false
+  }));
+};
 
+export const createInitialPage = (pageNumber: number): ComicPage => {
   return {
     id: generateId(),
     pageNumber,
-    layout,
-    elements,
+    layout: 'single',
     backgroundColor: '#ffffff',
+    elements: generatePanelsFromLayout('single'),
     isDirty: true
   };
 };

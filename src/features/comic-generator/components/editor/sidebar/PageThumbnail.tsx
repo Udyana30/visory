@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useDrag, useDrop } from 'react-dnd';
 import { Trash2 } from 'lucide-react';
 import { ComicPage } from '../../../types/domain/editor';
 
@@ -8,7 +9,15 @@ interface PageThumbnailProps {
   isActive: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  onMove: (dragIndex: number, hoverIndex: number) => void;
+  onDropComplete: () => void;
   canDelete: boolean;
+}
+
+interface DragItem {
+  index: number;
+  id: string;
+  type: string;
 }
 
 export const PageThumbnail: React.FC<PageThumbnailProps> = ({
@@ -17,16 +26,59 @@ export const PageThumbnail: React.FC<PageThumbnailProps> = ({
   isActive,
   onSelect,
   onDelete,
+  onMove,
+  onDropComplete,
   canDelete
 }) => {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const [{ isDragging }, drag] = useDrag({
+    type: 'PAGE',
+    item: { type: 'PAGE', id: page.id, index },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+    end: (item, monitor) => {
+      if (monitor.didDrop()) {
+        onDropComplete();
+      }
+    }
+  });
+
+  const [, drop] = useDrop({
+    accept: 'PAGE',
+    hover(item: DragItem, monitor) {
+      if (!ref.current) return;
+      
+      const dragIndex = item.index;
+      const hoverIndex = index;
+
+      if (dragIndex === hoverIndex) return;
+
+      const hoverBoundingRect = ref.current?.getBoundingClientRect();
+      const hoverMiddleX = (hoverBoundingRect.right - hoverBoundingRect.left) / 2;
+      const clientOffset = monitor.getClientOffset();
+      const hoverClientX = (clientOffset as any).x - hoverBoundingRect.left;
+
+      if (dragIndex < hoverIndex && hoverClientX < hoverMiddleX) return;
+      if (dragIndex > hoverIndex && hoverClientX > hoverMiddleX) return;
+
+      onMove(dragIndex, hoverIndex);
+      item.index = hoverIndex;
+    },
+  });
+
+  drag(drop(ref));
+
   return (
     <div
+      ref={ref}
       onClick={onSelect}
       className={`relative group cursor-pointer flex-shrink-0 rounded-lg border-2 transition-all duration-200 ${
         isActive
           ? 'border-blue-500 bg-blue-50 shadow-md ring-1 ring-blue-200'
           : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
-      }`}
+      } ${isDragging ? 'opacity-0' : 'opacity-100'}`}
       style={{ height: '140px', minWidth: '100px' }}
     >
       <div className="w-full h-full flex items-center justify-center relative overflow-hidden rounded-md">

@@ -1,15 +1,18 @@
 import { ReferenceType } from "../api/reference";
 
+export type ReferenceSource = 'generated' | 'upload';
+
 export interface Reference {
   id: string;
+  projectId: number;
   name: string;
   type: ReferenceType;
+  source: ReferenceSource;
   imageUrl: string;
   prompt: string;
   clothingPrompt?: string;
   negativePrompt: string;
   llmDescription: string;
-  isCustom: boolean;
 }
 
 export interface CreateReferenceFormData {

@@ -2,7 +2,11 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 
-export const AutoSaveIndicator: React.FC = () => {
+interface AutoSaveIndicatorProps {
+  message?: string;
+}
+
+export const AutoSaveIndicator: React.FC<AutoSaveIndicatorProps> = ({ message }) => {
   return (
     <motion.div 
       initial={{ y: -50, opacity: 0, x: "-50%" }}
@@ -14,7 +18,7 @@ export const AutoSaveIndicator: React.FC = () => {
       <div className="bg-white rounded-lg shadow-xl border border-gray-200 px-6 py-3 flex items-center gap-3 min-w-[280px]">
         <Loader2 className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0" />
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-900">Auto saving...</p>
+          <p className="text-sm font-medium text-gray-900">{message || "Auto saving..."}</p>
           <div className="mt-1.5 w-full bg-gray-200 rounded-full h-1 overflow-hidden">
             <motion.div 
               initial={{ width: "0%" }}

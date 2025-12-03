@@ -40,3 +40,10 @@ export interface CreatePageRequest {
   layout?: string;
   notes?: string;
 }
+
+export interface UpdatePageRequest {
+  page_number?: number;
+  notes?: string;
+  layout?: string;
+  background_color?: string;
+}

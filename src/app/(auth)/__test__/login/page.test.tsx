@@ -1,171 +1,192 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import LoginPage from "../../login/page";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import LoginPage from "../../login/page"; 
 import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 
-jest.mock("../../components/AuthHeader", () => ({
-  AuthHeader: ({ title }: { title: string }) => <h1>{title}</h1>,
-}));
-jest.mock("../../components/AuthInput", () => ({
-  AuthInput: ({
-    id,
-    name,
-    placeholder,
-    onChange,
-    value,
-    type = "text",
-  }: {
-    id: string;
-    name: string;
-    placeholder: string;
-    value: string;
-    type?: string;
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  }) => (
-    <input
-      id={id}
-      name={name}
-      placeholder={placeholder}
-      value={value}
-      type={type}
-      onChange={onChange}
-      aria-label={placeholder}
-    />
-  ),
-}));
-jest.mock("../../components/AuthButton", () => ({
-  AuthButton: ({
-    children,
-    ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
-    <button {...props}>{children}</button>
-  ),
-}));
-jest.mock("../../components/ErrorAlert", () => ({
-  ErrorAlert: ({ message }: { message?: string }) =>
-    message ? <div>{message}</div> : null,
-}));
-jest.mock("../../components/Divider", () => ({
-  Divider: () => <hr />,
-}));
-jest.mock("../../components/SocialLoginButtons", () => ({
-  SocialLoginButtons: ({
-    onGoogleClick,
-    onAppleClick,
-  }: {
-    onGoogleClick: () => void;
-    onAppleClick: () => void;
-  }) => (
-    <div>
-      <button onClick={onGoogleClick}>Google</button>
-      <button onClick={onAppleClick}>Apple</button>
-    </div>
-  ),
+// --- MOCKS & SETUP ---
+
+jest.mock("next/navigation", () => ({
+  useRouter: jest.fn(),
 }));
 
 jest.mock("@/hooks/useAuth", () => ({
   useAuth: jest.fn(),
 }));
 
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: jest.fn() }),
+// Mock path absolute/alias untuk menghindari error module not found
+jest.mock("@/app/(auth)/components/AuthHeader", () => ({
+  AuthHeader: () => <div data-testid="auth-header">Header</div>,
+}), { virtual: true });
+
+jest.mock("../../components/AuthHeader", () => ({
+  AuthHeader: () => <div data-testid="auth-header">Header</div>,
 }));
 
-describe("LoginPage Component (TypeScript & Modularized)", () => {
-  let mockLogin: jest.Mock;
+// Mock AuthInput: Perlu logika sederhana untuk menangani prop 'type' 
+jest.mock("../../components/AuthInput", () => ({
+  AuthInput: ({ id, value, onChange, placeholder, type, onTogglePassword, showPassword }: any) => {
+    let effectiveType = type;
+    if (typeof showPassword === 'boolean') {
+        effectiveType = showPassword ? 'text' : 'password';
+    }
+    return (
+      <div>
+        <input
+          data-testid={`input-${id}`}
+          name={id}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          type={effectiveType} 
+        />
+        {onTogglePassword && (
+          <button type="button" data-testid="toggle-password" onClick={onTogglePassword}>
+            Toggle
+          </button>
+        )}
+      </div>
+    );
+  },
+}));
+
+jest.mock("../../components/AuthButton", () => ({
+  AuthButton: ({ children, onClick, type, disabled, isLoading }: any) => (
+    <button data-testid="auth-button" type={type} onClick={onClick} disabled={disabled}>
+      {isLoading ? "Loading..." : children}
+    </button>
+  ),
+}));
+
+// Mock SuccessModal: Menambahkan tombol close manual untuk memicu logika redirect di Page.
+jest.mock("../../components/SuccessModal", () => ({
+  SuccessModal: ({ isOpen, onClose }: any) => 
+    isOpen ? (
+      <div data-testid="success-modal">
+        Success Modal
+        <button data-testid="close-modal" onClick={onClose}>Close</button>
+      </div>
+    ) : null,
+}));
+
+jest.mock("../../components/ErrorAlert", () => ({
+  ErrorAlert: ({ message }: any) => (message ? <div data-testid="error-alert">{message}</div> : null),
+}));
+
+// Mock SocialLoginButtons: Menghindari error GoogleOAuthProvider
+jest.mock("../../components/SocialLoginButtons", () => ({
+  SocialLoginButtons: () => <div data-testid="social-buttons">Social Buttons</div>,
+}));
+
+// --- TEST SUITE ---
+
+describe("White Box Testing - Login Page", () => {
+  const mockLogin = jest.fn();
+  const mockPush = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockLogin = jest.fn();
+    jest.useFakeTimers();
+
+    (useRouter as jest.Mock).mockReturnValue({ push: mockPush });
 
     (useAuth as jest.Mock).mockReturnValue({
       login: mockLogin,
-      loading: false,
+      googleLogin: jest.fn(),
       error: null,
     });
   });
 
-  test("menampilkan form login dengan elemen penting", () => {
-    render(<LoginPage />);
-
-    expect(screen.getByText(/welcome back/i)).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText(/username or email/i)
-    ).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/^password$/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /log in/i })).toBeInTheDocument();
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
-  test("login berhasil memanggil useAuth.login dengan benar", async () => {
-    mockLogin.mockResolvedValueOnce({ success: true });
-
+  // --- PATH 1: VALIDASI INPUT KOSONG ---
+  // Skenario: User submit tanpa data -> Sistem validasi internal mencegah API call.
+  it("Path 1: Menampilkan error validasi jika form dikirim kosong", () => {
     render(<LoginPage />);
+    
+    // 1. Trigger Submit tanpa isi form
+    fireEvent.click(screen.getByTestId("auth-button"));
 
-    fireEvent.change(screen.getByPlaceholderText(/username or email/i), {
-      target: { value: "user@example.com" },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/^password$/i), {
-      target: { value: "123456" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /log in/i }));
-
-    await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith({
-        email: "user@example.com",
-        password: "123456",
-      });
-    });
+    // 2. Verifikasi Logic: API Login TIDAK boleh dipanggil
+    expect(mockLogin).not.toHaveBeenCalled();
+    
+    // 3. Verifikasi UI: Pesan validasi muncul
+    expect(screen.getByTestId("error-alert")).toHaveTextContent(/please fill in all fields/i);
   });
 
-  test("menampilkan error jika API gagal login", async () => {
-    (useAuth as jest.Mock).mockReturnValue({
-      login: jest
-        .fn()
-        .mockResolvedValueOnce({ success: false, message: "Login failed" }),
-      loading: false,
-      error: "Login failed",
-    });
+  // --- PATH 2: LOGIN GAGAL (API) ---
+  // Skenario: Input valid -> API melempar error -> Pesan error API ditampilkan.
+  it("Path 2: Menangani kegagalan login dari API", async () => {
+    // 1. Setup Mock: API mengembalikan status gagal
+    mockLogin.mockResolvedValue({ success: false, message: "Login failed." });
 
     render(<LoginPage />);
 
-    fireEvent.change(screen.getByPlaceholderText(/username or email/i), {
-      target: { value: "wrong@example.com" },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/^password$/i), {
-      target: { value: "wrongpass" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /log in/i }));
+    // 2. User mengisi form dengan data (format benar)
+    fireEvent.change(screen.getByTestId("input-email"), { target: { value: "test@example.com" } });
+    fireEvent.change(screen.getByTestId("input-password"), { target: { value: "Password123" } });
 
-    expect(await screen.findByText(/login failed/i)).toBeInTheDocument();
+    // 3. Trigger Submit
+    fireEvent.click(screen.getByTestId("auth-button"));
+
+    // 4. Verifikasi State: Tombol disabled saat loading
+    expect(screen.getByTestId("auth-button")).toBeDisabled();
+
+    // 5. Verifikasi UI (Async): Tunggu alert muncul
+    const errorAlert = await screen.findByTestId("error-alert");
+    expect(errorAlert).toHaveTextContent("Login failed.");
+    expect(mockLogin).toHaveBeenCalled();
   });
 
-  test("menampilkan pesan error jika terjadi exception tak terduga", async () => {
-    (useAuth as jest.Mock).mockReturnValue({
-      login: jest.fn().mockImplementation(() => {
-        throw new Error("Unexpected error");
-      }),
-      loading: false,
-      error: "Unexpected error",
-    });
+  // --- PATH 3: LOGIN BERHASIL ---
+  // Skenario: Input valid -> API Sukses -> Modal Muncul -> Redirect ke Dashboard.
+  it("Path 3: Login berhasil, tampilkan modal, dan redirect", async () => {
+    // 1. Setup Mock: API mengembalikan status sukses
+    mockLogin.mockResolvedValue({ success: true });
 
     render(<LoginPage />);
 
-    fireEvent.change(screen.getByPlaceholderText(/username or email/i), {
-      target: { value: "user@example.com" },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/^password$/i), {
-      target: { value: "123456" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /log in/i }));
+    // 2. User mengisi form
+    fireEvent.change(screen.getByTestId("input-email"), { target: { value: "user@example.com" } });
+    fireEvent.change(screen.getByTestId("input-password"), { target: { value: "Password123" } });
 
-    expect(await screen.findByText(/unexpected error/i)).toBeInTheDocument();
+    // 3. Trigger Submit
+    fireEvent.click(screen.getByTestId("auth-button"));
+
+    // 4. Verifikasi UI: Modal Sukses harus muncul
+    const modal = await screen.findByTestId("success-modal");
+    expect(modal).toBeInTheDocument();
+
+    // 5. Simulasi Redirect: User/System menutup modal
+    fireEvent.click(screen.getByTestId("close-modal"));
+
+    // 6. Percepat waktu (skip setTimeout 350ms)
+    act(() => {
+      jest.runAllTimers();
+    });
+
+    // 7. Verifikasi Logic: Router push dipanggil ke /home
+    expect(mockPush).toHaveBeenCalledWith("/home");
   });
 
-  test("toggle password visibility bekerja dengan benar (mock)", () => {
+  // --- LOGIC UI TAMBAHAN ---
+  it("Logic: Toggle Password Visibility", () => {
     render(<LoginPage />);
+    
+    const passwordInput = screen.getByTestId("input-password");
+    const toggleButton = screen.getByTestId("toggle-password");
 
-    // Karena komponen AuthInput dimock sederhana, kita hanya pastikan field ada
-    const passwordInput = screen.getByPlaceholderText(/^password$/i);
-    expect(passwordInput).toBeInTheDocument();
+    // Cek state awal (password hidden)
+    expect(passwordInput).toHaveAttribute("type", "password");
+
+    // Klik toggle -> jadi text
+    fireEvent.click(toggleButton);
+    expect(passwordInput).toHaveAttribute("type", "text");
+
+    // Klik toggle lagi -> jadi password
+    fireEvent.click(toggleButton);
+    expect(passwordInput).toHaveAttribute("type", "password");
   });
 });

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDrop } from 'react-dnd';
-import { useEditorActions } from '@/features/comic-generator/hooks/useEditorActions';
+import { useEditorActions } from '@/features/comic-generator/hooks/editor/useEditorActions';
 import { ComicPanel, SpeechBubble } from '@/features/comic-generator/types/domain/editor';
 import { DEFAULT_PAGE_WIDTH, DEFAULT_PAGE_HEIGHT } from '@/features/comic-generator/constants/editor';
 import { RndPanel } from './elements/RndPanel';
