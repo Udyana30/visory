@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
-import { GENRES, LANGUAGES } from '../../constants/project';
+import { GENRES, LANGUAGES } from '../../../../constants/comic';
 import { ProjectFormData } from '../../types/domain/project';
 
 interface ProjectBasicInputsProps {

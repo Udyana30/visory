@@ -1,6 +1,6 @@
 import apiClient from '@/lib/apiClient';
 import { CreateReferenceRequest, ReferenceResponse } from '../types/api/reference';
-import { ApiResponseWrapper } from '../types/common';
+import { ApiResponseWrapper } from '../../../types/common';
 
 export const referenceService = {
   create: async (data: CreateReferenceRequest): Promise<ReferenceResponse> => {

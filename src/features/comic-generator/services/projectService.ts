@@ -4,7 +4,7 @@ import {
   ProjectResponse, 
   ComicListResponse 
 } from '../types/api/project';
-import { PaginationParams } from '../types/common';
+import { PaginationParams } from '../../../types/common';
 
 export const projectService = {
   create: async (data: CreateProjectRequest): Promise<ProjectResponse> => {

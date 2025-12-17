@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { projectService } from '../../services/projectService';
 import { ProjectFormData, Project } from '../../types/domain/project';
-import { PAGE_SIZES_MAP, ART_STYLES } from '../../constants/project';
+import { PAGE_SIZES_MAP, ART_STYLES } from '../../../../constants/comic';
 
 interface UseUpdateProjectReturn {
   updateProject: (id: number, formData: ProjectFormData) => Promise<Project | null>;

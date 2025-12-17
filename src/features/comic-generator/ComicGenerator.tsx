@@ -18,8 +18,8 @@ import { referenceService } from './services/referenceService';
 import { EditorProvider } from './context/EditorContext';
 import { mapToDomain as mapReferenceToDomain } from './utils/referenceMapper';
 
-import { TIMELINE_STEPS } from './constants/comic';
-import { PAGE_SIZES_MAP, ART_STYLES } from './constants/project';
+import { TIMELINE_STEPS } from './constants/timeline';
+import { PAGE_SIZES_MAP, ART_STYLES } from '../../constants/comic';
 import { Project, ProjectFormData } from './types/domain/project';
 import { SceneVisualization as SceneType } from './types/domain/scene';
 import { Reference } from './types/domain/reference';

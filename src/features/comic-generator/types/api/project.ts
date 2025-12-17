@@ -1,4 +1,4 @@
-import { ApiResponseWrapper } from "../common";
+import { ApiResponseWrapper } from "../../../../types/common";
 
 export interface PageSizeDTO {
   width: number;

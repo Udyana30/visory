@@ -1,5 +1,5 @@
-import { PageSizeDTO } from '../types/api/project';
-import { ArtStyle } from '../types/domain/project';
+import { PageSizeDTO } from '../features/comic-generator/types/api/project';
+import { ArtStyle } from '../features/comic-generator/types/domain/project';
 import { FileText, BookOpen, Smartphone, Square, Monitor } from 'lucide-react';
 
 export const GENRES = [

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check } from 'lucide-react';
-import { ART_STYLES } from '../../constants/project';
+import { ART_STYLES } from '../../../../constants/comic';
 
 interface ArtStyleSelectorProps {
   selectedIndex: number | null;

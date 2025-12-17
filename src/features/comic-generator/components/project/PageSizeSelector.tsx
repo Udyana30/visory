@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Check, ChevronRight } from 'lucide-react';
-import { PAGE_SIZE_DETAILS } from '../../constants/project';
+import { PAGE_SIZE_DETAILS } from '../../../../constants/comic';
 
 interface PageSizeSelectorProps {
   selectedLabel: string;
