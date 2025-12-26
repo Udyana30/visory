@@ -1,4 +1,6 @@
 import { Metadata } from 'next';
+import { VoiceLibraryProvider } from '@/features/avatar-generator/context/VoiceLibraryContext';
+import { TTSProvider } from '@/features/avatar-generator/context/TTSContext';
 import { AvatarGenerator } from '@/features/avatar-generator/AvatarGenerator';
 
 export const metadata: Metadata = {
@@ -7,5 +9,11 @@ export const metadata: Metadata = {
 };
 
 export default function AvatarGeneratorPage() {
-  return <AvatarGenerator />;
+  return (
+    <VoiceLibraryProvider>
+      <TTSProvider>
+        <AvatarGenerator />
+      </TTSProvider>
+    </VoiceLibraryProvider>
+  );
 }

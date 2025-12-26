@@ -3,24 +3,40 @@ import { RefreshCw } from 'lucide-react';
 import { VideoPlayer } from '../components/VideoPreview';
 import { useAvatarHistory } from '../hooks/useAvatarHistory';
 import { useAvatarPolling } from '../hooks/useAvatarPolling';
+import { useAvatarActions } from '../hooks/useAvatarActions';
 import { AvatarProject } from '../types/domain/project';
+import { useAuth } from '@/hooks/useAuth';
 
-const PollingWrapper: React.FC<{ project: AvatarProject }> = ({ project }) => {
-  const { project: liveProject } = useAvatarPolling({ 
-    initialProject: project 
+const PollingWrapper: React.FC<{ project: AvatarProject; onDelete: (id: string) => void }> = ({ project, onDelete }) => {
+  const { project: liveProject } = useAvatarPolling({
+    initialProject: project
   });
 
-  return <VideoPlayer project={liveProject} />;
+  return <VideoPlayer project={liveProject} onDelete={onDelete} />;
 };
 
 export const HistorySection: React.FC = () => {
-  const { projects, isLoading, refresh } = useAvatarHistory();
+  const { user } = useAuth();
+  const { projects, isLoading, refresh } = useAvatarHistory(user?.id);
+  const { deleteAvatar } = useAvatarActions();
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this project?')) {
+      try {
+        await deleteAvatar(id);
+        refresh();
+      } catch (error) {
+        console.error('Failed to delete project:', error);
+        alert('Failed to delete project');
+      }
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-bold text-gray-900">Recent Generations</h3>
-        <button 
+        <button
           onClick={() => refresh()}
           className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
           title="Refresh List"
@@ -36,7 +52,7 @@ export const HistorySection: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map((project) => (
-            <PollingWrapper key={project.id} project={project} />
+            <PollingWrapper key={project.id} project={project} onDelete={handleDelete} />
           ))}
         </div>
       )}

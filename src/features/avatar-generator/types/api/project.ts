@@ -26,6 +26,9 @@ export interface ApiAvatarProject {
   created_at: string;
   updated_at: string;
   parameters: ApiAvatarParameters;
+  type?: 'single_person' | 'multi_person';
+  audio_order?: string | null;
+  audio_url_2?: string | null;
 }
 
 export interface ApiAvatarStatusResponse {

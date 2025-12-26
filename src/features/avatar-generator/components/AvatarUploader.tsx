@@ -1,93 +1,90 @@
-import React, { useRef, useState } from 'react';
-import { UploadCloud, Image as ImageIcon, X } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Upload, Image as ImageIcon } from 'lucide-react';
 
 interface AvatarUploaderProps {
-  previewUrl?: string;
   onFileSelect: (file: File) => void;
-  onClear: () => void;
   disabled?: boolean;
+  currentPreview?: string;
 }
 
-export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
-  previewUrl,
-  onFileSelect,
-  onClear,
-  disabled
+export const AvatarUploader: React.FC<AvatarUploaderProps> = ({ 
+  onFileSelect, 
+  disabled = false,
+  currentPreview
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
 
-  const handleDrag = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!disabled) setIsDragging(e.type === 'dragenter' || e.type === 'dragover');
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
-    if (!disabled && e.dataTransfer.files?.[0]) {
-      onFileSelect(e.dataTransfer.files[0]);
+    if (disabled) return;
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      onFileSelect(file);
     }
   };
 
-  if (previewUrl) {
-    return (
-      <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden border border-gray-200 bg-gray-50 group">
-        <img 
-          src={previewUrl} 
-          alt="Avatar Preview" 
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
-        />
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
-        <button
-          onClick={onClear}
-          disabled={disabled}
-          className="absolute top-3 right-3 p-1.5 bg-white/90 backdrop-blur-sm rounded-lg text-gray-700 opacity-0 group-hover:opacity-100 transition-all hover:bg-white hover:text-red-600 disabled:opacity-0"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-    );
-  }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onFileSelect(file);
+    }
+  };
 
   return (
-    <div
-      onClick={() => !disabled && inputRef.current?.click()}
-      onDragEnter={handleDrag}
-      onDragLeave={handleDrag}
-      onDragOver={handleDrag}
-      onDrop={handleDrop}
-      className={`relative w-full aspect-[3/4] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-6 text-center transition-all cursor-pointer ${
-        isDragging
-          ? 'border-blue-500 bg-blue-50'
-          : 'border-gray-200 bg-gray-50/50 hover:border-gray-300 hover:bg-gray-50'
-      } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-    >
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => e.target.files?.[0] && onFileSelect(e.target.files[0])}
-        disabled={disabled}
-      />
-      
-      <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center mb-4">
-        {isDragging ? (
-          <UploadCloud className="w-6 h-6 text-blue-500" />
+    <div className="h-full w-full">
+      <div
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        onClick={() => !disabled && inputRef.current?.click()}
+        className={`
+          relative group cursor-pointer h-full w-full
+          border-dashed rounded-xl overflow-hidden
+          transition-all duration-200 ease-in-out flex flex-col
+          ${currentPreview ? 'border-2 border-blue-200 bg-blue-50/30' : 'border border-gray-200 bg-gray-50/50 hover:border-blue-400 hover:bg-blue-50/30'}
+          ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+        `}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleChange}
+          disabled={disabled}
+        />
+
+        {currentPreview ? (
+          <>
+            <img 
+              src={currentPreview} 
+              alt="Avatar Preview" 
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span className="text-white text-xs font-medium flex items-center gap-1.5 px-3 py-1.5 bg-black/20 backdrop-blur-sm rounded-full">
+                <Upload className="w-3 h-3" /> Change
+              </span>
+            </div>
+          </>
         ) : (
-          <ImageIcon className="w-6 h-6 text-gray-400" />
+          <div className="flex flex-col items-center justify-center text-center h-full p-4 gap-2">
+            <div className="p-2.5 bg-white rounded-full shadow-sm ring-1 ring-gray-100 group-hover:scale-110 transition-transform">
+              <ImageIcon className="w-5 h-5 text-gray-400 group-hover:text-blue-600" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-gray-600 group-hover:text-blue-700">Upload Image</p>
+              <p className="text-[9px] text-gray-400 mt-0.5">Drag & drop or click</p>
+            </div>
+          </div>
         )}
       </div>
-      
-      <p className="text-sm font-semibold text-gray-900 mb-1">
-        Upload Portrait
-      </p>
-      <p className="text-xs text-gray-500 max-w-[200px]">
-        Drag & drop or click to upload a clear face image (JPG, PNG)
-      </p>
     </div>
   );
 };

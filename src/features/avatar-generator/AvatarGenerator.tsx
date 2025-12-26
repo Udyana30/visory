@@ -5,9 +5,11 @@ import { CreateAvatarSection } from './sections/CreateAvatarSection';
 import { HistorySection } from './sections/HistorySection';
 import { useAvatarHistory } from './hooks/useAvatarHistory';
 import TopBar from '@/components/layout/TopBar';
+import { useAuth } from '@/hooks/useAuth';
 
 export const AvatarGenerator: React.FC = () => {
-  const { refresh } = useAvatarHistory();
+  const { user } = useAuth();
+  const { refresh } = useAvatarHistory(user?.id);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">

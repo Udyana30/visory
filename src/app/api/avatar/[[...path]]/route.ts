@@ -1,55 +1,102 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_AVATAR_API_URL;
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
+const MODAL_API_URL = process.env.MODAL_API_URL;
+const MODAL_API_KEY = process.env.MODAL_API_KEY;
 
-// Pastikan export functions ada di dalam file ini
-export async function GET(request: NextRequest, { params }: { params: Promise<{ path?: string[] }> }) {
-  return handleRequest(request, await params);
-}
+async function handleProxy(request: NextRequest, { params }: { params: Promise<{ path?: string[] }> }) {
+  if (!MODAL_API_URL) {
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+  }
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ path?: string[] }> }) {
-  return handleRequest(request, await params);
-}
+  const { path } = await params;
+  const pathSegments = path || [];
+  let pathString = pathSegments.join('/');
 
-async function handleRequest(request: NextRequest, params: { path?: string[] }) {
-  const path = params.path?.join('/') ?? ''; 
-  const query = request.nextUrl.search;
-  
-  const targetUrl = `${API_URL}/api/v1/projects/${path}${query}`;
+  if (!pathString) {
+    pathString = 'projects/';
+  }
 
-  console.log(`🔀 Proxying to: ${targetUrl}`);
+  if (pathString === 'projects' || pathString === 'avatars') {
+    pathString += '/';
+  }
 
-  const body = request.method !== 'GET' ? await request.json() : undefined;
+  const queryString = request.nextUrl.search;
+  const targetEndpoint = `${MODAL_API_URL}/api/v1/${pathString}${queryString}`.replace(/([^:]\/)\/+/g, "$1");
 
   try {
-    const response = await fetch(targetUrl, {
-      method: request.method,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': API_KEY || '',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    const headers = new Headers();
+    if (MODAL_API_KEY) {
+      headers.set('Authorization', `Bearer ${MODAL_API_KEY}`);
+      headers.set('X-API-Key', MODAL_API_KEY);
+    }
+    headers.set('Accept', 'application/json');
 
-    const contentType = response.headers.get('content-type');
-    let data;
-    
-    if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-    } else {
-        data = { message: 'Non-JSON response from upstream', status: response.status };
+    let body: BodyInit | undefined;
+    const contentType = request.headers.get('content-type') || '';
+
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      if (contentType.includes('multipart/form-data')) {
+        const incomingFormData = await request.formData();
+        const newFormData = new FormData();
+        for (const [key, value] of incomingFormData.entries()) {
+          newFormData.append(key, value);
+        }
+        body = newFormData;
+        headers.delete('Content-Type');
+      } else {
+        const textBody = await request.text();
+        if (textBody) {
+          body = textBody;
+          if (!headers.has('Content-Type')) {
+            headers.set('Content-Type', 'application/json');
+          }
+        }
+      }
     }
 
-    return NextResponse.json(data, {
-      status: response.status,
+    const response = await fetch(targetEndpoint, {
+      method: request.method,
+      headers: headers,
+      body: body,
+      cache: 'no-store',
+      redirect: 'follow'
     });
 
+    const responseContentType = response.headers.get('content-type');
+    let data;
+
+    if (responseContentType && responseContentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { message: text };
+      }
+    }
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: `Upstream Error: ${response.status}`, details: data },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json(data, { status: 200 });
+
   } catch (error) {
-    console.error('Proxy Error:', error);
     return NextResponse.json(
-      { message: 'Proxy Internal Error', detail: String(error) },
-      { status: 500 }
+      {
+        error: 'Proxy Gateway Error',
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 502 }
     );
   }
 }
+
+export async function GET(req: NextRequest, ctx: any) { return handleProxy(req, ctx); }
+export async function POST(req: NextRequest, ctx: any) { return handleProxy(req, ctx); }
+export async function PUT(req: NextRequest, ctx: any) { return handleProxy(req, ctx); }
+export async function DELETE(req: NextRequest, ctx: any) { return handleProxy(req, ctx); }

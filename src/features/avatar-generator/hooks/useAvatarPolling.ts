@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AvatarProject } from '../types/domain/project';
-import { avatarService } from '../services/avatarService';
+import { avatarProjectService } from '../services/avatarProjectService';
 import { POLLING_INTERVAL, MAX_POLLING_ATTEMPTS } from '../constants/defaults';
 
 interface UseAvatarPollingProps {
@@ -13,7 +13,7 @@ export const useAvatarPolling = ({ initialProject, onComplete }: UseAvatarPollin
   const [isPolling, setIsPolling] = useState(
     initialProject.status === 'queued' || initialProject.status === 'processing'
   );
-  
+
   const attemptsRef = useRef(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -26,8 +26,8 @@ export const useAvatarPolling = ({ initialProject, onComplete }: UseAvatarPollin
     }
 
     try {
-      const update = await avatarService.getStatus(project.id);
-      
+      const update = await avatarProjectService.getStatus(project.id);
+
       setProject((prev) => ({
         ...prev,
         status: update.status,

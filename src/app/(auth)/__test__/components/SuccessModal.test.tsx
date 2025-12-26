@@ -1,6 +1,6 @@
 import { render, screen, act } from '@testing-library/react';
 import { SuccessModal } from '../../components/SuccessModal';
-
+  
 describe('White Box - SuccessModal', () => {
   beforeEach(() => {
     jest.useFakeTimers();

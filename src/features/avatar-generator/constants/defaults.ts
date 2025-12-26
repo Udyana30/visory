@@ -38,7 +38,7 @@ export const QUALITY_PRESETS: { label: string; description: string; badge: strin
 ];
 
 export const DEFAULT_AVATAR_PROMPT = "A talking head video";
-export const POLLING_INTERVAL = 3000;
+export const POLLING_INTERVAL = 60000;
 export const MAX_POLLING_ATTEMPTS = 100;
 
 export const AVATAR_API_ENDPOINTS = {

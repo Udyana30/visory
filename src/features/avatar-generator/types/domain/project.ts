@@ -31,4 +31,10 @@ export interface CreateAvatarPayload {
   imageUrl: string;
   audioUrl: string;
   parameters: AvatarParameters;
+  userId?: string; 
+  imageFile?: File;
+  audioFile?: File;
+  type?: 'single_person' | 'multi_person';
+  audioOrder?: string;
+  secondAudioFile?: File;
 }
