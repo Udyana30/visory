@@ -65,7 +65,6 @@ export const avatarProjectService = {
   },
 
   deleteProject: async (id: string): Promise<void> => {
-    // Ensure we don't have double slashes if id starts with /
     const endpoint = `${PROJECT_ENDPOINT}${id}`;
     await avatarApiClient.delete(endpoint);
   }

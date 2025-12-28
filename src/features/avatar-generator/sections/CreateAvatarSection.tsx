@@ -30,6 +30,13 @@ export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSucc
   const [audioFile2, setAudioFile2] = useState<File | null>(null);
   const [audioOrder, setAudioOrder] = useState<string>('meanwhile');
 
+  // Prefetch Kokoro voices
+  React.useEffect(() => {
+    import('../services/kokoroService').then(({ kokoroService }) => {
+      kokoroService.getVoices().catch(err => console.error('Failed to prefetch voices:', err));
+    });
+  }, []);
+
   const handleImageSelect = (file: File) => {
     setImageFile(file);
     const url = URL.createObjectURL(file);

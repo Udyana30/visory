@@ -16,7 +16,7 @@ async function handleProxy(request: NextRequest, { params }: { params: Promise<{
     pathString = 'projects/';
   }
 
-  if (pathString === 'projects' || pathString === 'avatars') {
+  if (pathString === 'projects' || pathString === 'avatars' || pathString === 'tts' || pathString === 'tts/generate') {
     pathString += '/';
   }
 

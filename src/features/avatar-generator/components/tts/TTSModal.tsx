@@ -1,13 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Wand2, History, Mic } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useVoiceLibrary } from '../../hooks/useVoiceLibrary';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { VoiceSample } from '../../types/domain/chatterbox';
+import { KokoroVoice } from '../../types/domain/kokoro';
 
 import { TTSGeneratorView, GeneratorSettings, DEFAULT_GENERATOR_SETTINGS } from './generator/TTSGeneratorView';
 import { TTSHistoryView } from './history/TTSHistoryView';
+import { KokoroHistoryView } from './history/KokoroHistoryView';
 import { VoiceLibraryView } from './library/VoiceLibraryView';
+import { KokoroVoiceLibrary } from './generator/KokoroVoiceLibrary';
+import { EngineSelector } from './generator/EngineSelector';
+import { useKokoro } from '../../hooks/useKokoro';
+import { KokoroProvider } from '../../context/KokoroContext';
+
+// localStorage key for engine preference
+const TTS_ENGINE_STORAGE_KEY = 'tts_active_engine';
+
+// Helper: Get stored engine preference
+const getStoredEngine = (): 'kokoro' | 'chatterbox' => {
+    try {
+        const stored = localStorage.getItem(TTS_ENGINE_STORAGE_KEY);
+        return (stored === 'kokoro' || stored === 'chatterbox') ? stored : 'kokoro';
+    } catch {
+        return 'kokoro';
+    }
+};
+
+// Helper: Save engine preference
+const saveEngine = (engine: 'kokoro' | 'chatterbox') => {
+    try {
+        localStorage.setItem(TTS_ENGINE_STORAGE_KEY, engine);
+    } catch (err) {
+        console.error('Failed to save engine preference:', err);
+    }
+};
 
 
 interface TTSModalProps {
@@ -16,6 +44,14 @@ interface TTSModalProps {
 }
 
 export const TTSModal: React.FC<TTSModalProps> = ({ onClose, onComplete }) => {
+    return (
+        <KokoroProvider>
+            <TTSModalContent onClose={onClose} onComplete={onComplete} />
+        </KokoroProvider>
+    );
+};
+
+const TTSModalContent: React.FC<TTSModalProps> = ({ onClose, onComplete }) => {
     useScrollLock(true);
 
     const { user } = useAuth();
@@ -24,13 +60,36 @@ export const TTSModal: React.FC<TTSModalProps> = ({ onClose, onComplete }) => {
     const voiceLib = useVoiceLibrary(userId);
     const { isLoading: isVoicesLoading } = voiceLib;
 
-    const [view, setView] = useState<'generator' | 'library'>('generator');
+    // Kokoro Hook
+    const kokoro = useKokoro(userId);
+
+    const [view, setView] = useState<'generator' | 'library' | 'kokoro-library'>('generator');
     const [activeTab, setActiveTab] = useState<'generate' | 'history'>('generate');
     const [selectedVoice, setSelectedVoice] = useState<VoiceSample | null>(null);
     const [generatorMode, setGeneratorMode] = useState<'cloning' | 'multilingual' | 'voice-changer'>('cloning');
     const [sourceFile, setSourceFile] = useState<File | null>(null);
-    const [text, setText] = useState('');
+    const [text, setText] = useState(''); // Chatterbox text
     const [settings, setSettings] = useState<GeneratorSettings>(DEFAULT_GENERATOR_SETTINGS);
+    const [activeEngine, setActiveEngine] = useState<'kokoro' | 'chatterbox'>(getStoredEngine());
+
+    // Load engine preference on mount
+    useEffect(() => {
+        const stored = getStoredEngine();
+        setActiveEngine(stored);
+    }, []);
+
+    // Save engine preference when changed
+    const handleEngineChange = (engine: 'kokoro' | 'chatterbox') => {
+        setActiveEngine(engine);
+        saveEngine(engine);
+    };
+
+    // Kokoro State
+    const [kokoroText, setKokoroText] = useState(''); // Kokoro text (persistent)
+    const [kokoroSpeed, setKokoroSpeed] = useState(1.0); // Kokoro speed (persistent)
+
+    // Kokoro Voice Selection State
+    const [selectedKokoroVoice, setSelectedKokoroVoice] = useState<KokoroVoice | null>(null);
 
     // Audio Preview State for History
     const [isPlaying, setIsPlaying] = useState(false);
@@ -112,17 +171,39 @@ export const TTSModal: React.FC<TTSModalProps> = ({ onClose, onComplete }) => {
                             setView('generator');
                         }}
                     />
+                ) : view === 'kokoro-library' ? (
+                    <KokoroVoiceLibrary
+                        voices={kokoro.voices}
+                        selectedVoiceId={selectedKokoroVoice?.id || ''}
+                        onSelect={(voiceId) => {
+                            const voice = kokoro.voices.find(v => v.id === voiceId);
+                            if (voice) {
+                                setSelectedKokoroVoice(voice);
+                            }
+                        }}
+                        onBack={() => setView('generator')}
+                    />
                 ) : (
                     <>
                         {/* Header */}
                         <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
-                            <div>
-                                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                                    <Wand2 className="w-6 h-6 text-blue-600" />
-                                    AI Voice Generator
-                                </h2>
-                                <p className="text-sm text-gray-500 mt-1">Create realistic speech from text in seconds</p>
+                            <div className="flex items-center gap-6">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                                        <Wand2 className="w-6 h-6 text-blue-600" />
+                                        AI Voice Generator
+                                    </h2>
+                                    <p className="text-sm text-gray-500 mt-1">Create realistic speech from text in seconds</p>
+                                </div>
+
+                                <div className="pl-6 border-l border-gray-200">
+                                    <EngineSelector
+                                        activeEngine={activeEngine}
+                                        onEngineChange={handleEngineChange}
+                                    />
+                                </div>
                             </div>
+
                             <button
                                 onClick={handleClose}
                                 className="p-2 hover:bg-gray-50 rounded-full text-gray-400 hover:text-gray-600 transition-colors"
@@ -176,17 +257,37 @@ export const TTSModal: React.FC<TTSModalProps> = ({ onClose, onComplete }) => {
                                     onTextChange={setText}
                                     settings={settings}
                                     onSettingsChange={setSettings}
+                                    activeEngine={activeEngine}
+                                    kokoro={kokoro}
+                                    selectedKokoroVoice={selectedKokoroVoice}
+                                    onOpenKokoroLibrary={() => setView('kokoro-library')}
+                                    kokoroText={kokoroText}
+                                    onKokoroTextChange={setKokoroText}
+                                    kokoroSpeed={kokoroSpeed}
+                                    onKokoroSpeedChange={setKokoroSpeed}
                                 />
 
                             ) : (
                                 <div className="flex-1 overflow-y-auto px-8 py-6 bg-gray-50/50">
-                                    <TTSHistoryView
-                                        userId={userId}
-                                        onUseAudio={handleUseAudio}
-                                        isPlaying={isPlaying}
-                                        playingProjectId={playingProjectId}
-                                        onPlay={handleHistoryPlay}
-                                    />
+                                    {activeEngine === 'kokoro' ? (
+                                        <KokoroHistoryView
+                                            projects={kokoro.projects}
+                                            isLoading={kokoro.isHistoryLoading}
+                                            onUseAudio={handleUseAudio}
+                                            isPlaying={isPlaying}
+                                            playingProjectId={playingProjectId}
+                                            onPlay={handleHistoryPlay}
+                                            onDelete={kokoro.deleteProject}
+                                        />
+                                    ) : (
+                                        <TTSHistoryView
+                                            userId={userId}
+                                            onUseAudio={handleUseAudio}
+                                            isPlaying={isPlaying}
+                                            playingProjectId={playingProjectId}
+                                            onPlay={handleHistoryPlay}
+                                        />
+                                    )}
                                 </div>
                             )}
                         </div>
