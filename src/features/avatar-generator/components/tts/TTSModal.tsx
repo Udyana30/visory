@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Wand2, History, Mic } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useVoiceLibrary } from '../../hooks/useVoiceLibrary';
+import { useVoiceLibrary } from '../../hooks/tts/useVoiceLibrary';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { VoiceSample } from '../../types/domain/chatterbox';
 import { KokoroVoice } from '../../types/domain/kokoro';
@@ -12,7 +12,7 @@ import { KokoroHistoryView } from './history/KokoroHistoryView';
 import { VoiceLibraryView } from './library/VoiceLibraryView';
 import { KokoroVoiceLibrary } from './generator/KokoroVoiceLibrary';
 import { EngineSelector } from './generator/EngineSelector';
-import { useKokoro } from '../../hooks/useKokoro';
+import { useKokoro } from '../../hooks/tts/useKokoro';
 import { KokoroProvider } from '../../context/KokoroContext';
 
 // localStorage key for engine preference

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Upload, Trash2, Play, Pause, Search, Mic, ChevronLeft } from 'lucide-react';
-import { UseVoiceLibraryResult } from '../../../hooks/useVoiceLibrary';
+import { UseVoiceLibraryResult } from '../../../hooks/tts/useVoiceLibrary';
 import { VoiceSample } from '../../../types/domain/chatterbox';
 
 interface VoiceLibraryViewProps {

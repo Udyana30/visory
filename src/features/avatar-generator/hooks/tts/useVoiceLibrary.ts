@@ -1,5 +1,5 @@
-import { useVoiceLibraryContext } from '../context/VoiceLibraryContext';
-import { VoiceSample } from '../types/domain/chatterbox';
+import { useVoiceLibraryContext } from '../../context/VoiceLibraryContext';
+import { VoiceSample } from '../../types/domain/chatterbox';
 
 export interface UseVoiceLibraryResult {
     voices: VoiceSample[];

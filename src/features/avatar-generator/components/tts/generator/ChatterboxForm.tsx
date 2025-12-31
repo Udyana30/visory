@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Loader2, Wand2, Mic, Globe, Shuffle, Check, RotateCcw } from 'lucide-react';
-import { useTTSGenerator } from '../../../hooks/useTTSGenerator';
+import { useTTSGenerator } from '../../../hooks/tts/useTTSGenerator';
 import { VoiceSample } from '../../../types/domain/chatterbox';
 import { CloningForm } from './CloningForm';
 import { MultilingualForm } from './MultilingualForm';

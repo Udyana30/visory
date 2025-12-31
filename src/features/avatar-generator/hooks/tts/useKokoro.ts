@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
-import { kokoroService } from '../services/kokoroService';
-import { useKokoroContext } from '../context/KokoroContext';
+import { kokoroService } from '../../services/tts/kokoroService';
+import { useKokoroContext } from '../../context/KokoroContext';
+import { usePolling } from './usePolling';
+import { KokoroGenerateResponse } from '../../types/domain/kokoro';
 
 export const useKokoro = (userId?: string) => {
     // Get data from context
@@ -18,39 +20,18 @@ export const useKokoro = (userId?: string) => {
     const [status, setStatus] = useState<string>('');
     const [lastGeneratedAudioUrl, setLastGeneratedAudioUrl] = useState<string | null>(null);
 
-    // Helper: Poll status (no auto-complete)
-    const pollStatus = async (ttsId: string) => {
-        const interval = setInterval(async () => {
-            try {
-                const statusRes = await kokoroService.checkStatus(ttsId);
-                if (statusRes.status === 'completed' && statusRes.audio_url) {
-                    clearInterval(interval);
-                    setLastGeneratedAudioUrl(statusRes.audio_url);
-                    setIsGenerating(false);
-                    setStatus('');
+    // Setup polling
+    const { startPolling, stopPolling } = usePolling<KokoroGenerateResponse>(
+        kokoroService.checkStatus,
+        (data) => data.status === 'completed',
+        (data) => data.status === 'failed'
+    );
 
-                    // Add to context cache and refresh history
-                    addProject(statusRes);
-                    refreshHistory();
-                } else if (statusRes.status === 'failed') {
-                    clearInterval(interval);
-                    throw new Error('Generation failed');
-                }
-            } catch (error) {
-                clearInterval(interval);
-                console.error('Polling error:', error);
-                alert('Error checking status');
-                setIsGenerating(false);
-                setStatus('');
-            }
-        }, 1500);
-    };
-
-    // Generate Audio (no auto-complete)
+    // Generate Audio
     const generateAudio = async (text: string, voice: string, speed: number) => {
         setIsGenerating(true);
         setStatus('Initializing...');
-        setLastGeneratedAudioUrl(null); // Reset previous
+        setLastGeneratedAudioUrl(null);
 
         try {
             const selectedVoiceObj = voices.find(v => v.id === voice);
@@ -63,25 +44,42 @@ export const useKokoro = (userId?: string) => {
             });
 
             if (response.status === 'completed' && response.audio_url) {
-                setLastGeneratedAudioUrl(response.audio_url);
-                setIsGenerating(false);
-                setStatus('');
-
-                // Add to context cache and refresh history
-                addProject(response);
-                refreshHistory();
+                handleGenerationSuccess(response);
             } else if (response.status === 'pending' || response.status === 'processing') {
                 setStatus('Processing...');
-                pollStatus(response.tts_id);
+                startPolling(
+                    response.tts_id,
+                    (data) => {
+                        if (data.status === 'completed' && data.audio_url) {
+                            handleGenerationSuccess(data);
+                        } else if (data.status === 'failed') {
+                            handleGenerationError(new Error('Generation failed'));
+                        }
+                    },
+                    (error) => handleGenerationError(error)
+                );
             } else {
                 throw new Error('Generation failed');
             }
         } catch (error) {
-            console.error('Kokoro generation error:', error);
-            alert('Failed to generate audio');
-            setIsGenerating(false);
-            setStatus('');
+            handleGenerationError(error);
         }
+    };
+
+    const handleGenerationSuccess = (data: KokoroGenerateResponse) => {
+        setLastGeneratedAudioUrl(data.audio_url);
+        setIsGenerating(false);
+        setStatus('');
+        addProject(data);
+        refreshHistory();
+    };
+
+    const handleGenerationError = (error: any) => {
+        console.error('Kokoro generation error:', error);
+        alert('Failed to generate audio'); // Consider using a toast notification instead
+        setIsGenerating(false);
+        setStatus('');
+        stopPolling();
     };
 
     // Download audio and return File
@@ -90,8 +88,7 @@ export const useKokoro = (userId?: string) => {
             const response = await fetch(url);
             const blob = await response.blob();
             const filename = `kokoro_${Date.now()}.wav`;
-            const file = new File([blob], filename, { type: 'audio/wav' });
-            return file;
+            return new File([blob], filename, { type: 'audio/wav' });
         } catch (error) {
             console.error('Download error:', error);
             throw new Error('Failed to download audio');
@@ -103,6 +100,7 @@ export const useKokoro = (userId?: string) => {
         setLastGeneratedAudioUrl(null);
         setIsGenerating(false);
         setStatus('');
+        stopPolling();
     };
 
     const deleteProject = async (ttsId: string) => {

@@ -6,6 +6,11 @@ export interface KokoroVoice {
     langCode: string;
 }
 
+export interface KokoroLanguage {
+    code: string;
+    name: string;
+}
+
 export interface KokoroGenerateRequest {
     text: string;
     voice: string;

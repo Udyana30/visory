@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
-import { chatterboxService } from '../services/chatterboxService';
+import { chatterboxService } from '../services/tts/chatterboxService';
 import { TTSProject } from '../types/domain/chatterbox';
 import { useAuth } from '@/hooks/useAuth';
 

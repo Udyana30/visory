@@ -3,7 +3,7 @@ import { VoiceSample } from '../../../types/domain/chatterbox';
 import { KokoroVoice } from '../../../types/domain/kokoro';
 import { KokoroForm } from './KokoroForm';
 import { ChatterboxForm, GeneratorSettings, DEFAULT_GENERATOR_SETTINGS } from './ChatterboxForm';
-import { useKokoro } from '../../../hooks/useKokoro';
+import { useKokoro } from '../../../hooks/tts/useKokoro';
 
 // Re-export types needed by parent
 export type { GeneratorSettings };

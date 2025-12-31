@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTTSGenerator } from '../../../hooks/useTTSGenerator';
+import { useTTSGenerator } from '../../../hooks/tts/useTTSGenerator';
 import { HistoryList } from './HistoryList';
 
 interface TTSHistoryViewProps {

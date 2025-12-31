@@ -1,5 +1,5 @@
 import { avatarApiClient } from '@/lib/apiClient';
-import { KokoroGenerateRequest, KokoroGenerateResponse, KokoroVoice } from '../types/domain/kokoro';
+import { KokoroGenerateRequest, KokoroGenerateResponse, KokoroVoice } from '../../types/domain/kokoro';
 
 const KOKORO_BASE = '/tts';
 
@@ -8,9 +8,7 @@ let languagesCache: any[] | null = null;
 
 export const kokoroService = {
     getVoices: async (): Promise<KokoroVoice[]> => {
-        if (voicesCache) {
-            return voicesCache;
-        }
+        if (voicesCache) return voicesCache;
 
         let languages = languagesCache;
         if (!languages) {
@@ -39,9 +37,7 @@ export const kokoroService = {
     },
 
     getLanguages: async (): Promise<any[]> => {
-        if (languagesCache) {
-            return languagesCache;
-        }
+        if (languagesCache) return languagesCache;
         const { data } = await avatarApiClient.get<{ languages: any[] }>(`${KOKORO_BASE}/languages`);
         languagesCache = data.languages;
         return data.languages;

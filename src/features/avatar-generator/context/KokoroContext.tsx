@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
-import { kokoroService } from '../services/kokoroService';
+import { kokoroService } from '../services/tts/kokoroService';
 import { KokoroVoice, KokoroGenerateResponse } from '../types/domain/kokoro';
 import { useAuth } from '@/hooks/useAuth';
 

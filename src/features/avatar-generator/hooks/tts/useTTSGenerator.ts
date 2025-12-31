@@ -1,10 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { chatterboxService } from '../services/chatterboxService';
-import { TTSProject, TTSGenerateRequest, MultilingualTTSRequest, SupportedLanguages, VoiceConversionRequest } from '../types/domain/chatterbox';
-import { useTTSContext } from '../context/TTSContext';
-
-const POLLING_INTERVAL = 5000;
-const MAX_ATTEMPTS = 60;
+import { useState, useEffect, useCallback } from 'react';
+import { chatterboxService } from '../../services/tts/chatterboxService';
+import { TTSProject, TTSGenerateRequest, MultilingualTTSRequest, SupportedLanguages, VoiceConversionRequest } from '../../types/domain/chatterbox';
+import { useTTSContext } from '../../context/TTSContext';
+import { usePolling } from './usePolling';
 
 export const useTTSGenerator = (userId?: string) => {
     const {
@@ -22,8 +20,12 @@ export const useTTSGenerator = (userId?: string) => {
     const [error, setError] = useState<string | null>(null);
     const [languages, setLanguages] = useState<SupportedLanguages>({});
 
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const attemptsRef = useRef(0);
+    // Setup polling
+    const { startPolling, stopPolling } = usePolling<TTSProject>(
+        chatterboxService.getProjectStatus,
+        (data) => data.status === 'completed',
+        (data) => data.status === 'failed'
+    );
 
     const fetchLanguages = useCallback(async () => {
         try {
@@ -38,33 +40,35 @@ export const useTTSGenerator = (userId?: string) => {
         fetchLanguages();
     }, [fetchLanguages]);
 
-    const pollStatus = useCallback(async (projectId: string) => {
-        if (attemptsRef.current >= MAX_ATTEMPTS) {
+    const handleGenerationStart = (initialProject: TTSProject) => {
+        setProject(initialProject);
+
+        if (initialProject.status === 'completed' || initialProject.status === 'failed') {
             setIsGenerating(false);
-            setError("Generation timed out");
-            return;
-        }
-
-        try {
-            const status = await chatterboxService.getProjectStatus(projectId);
-            setProject(status);
-
-            if (status.status === 'completed' || status.status === 'failed') {
-                setIsGenerating(false);
-                if (status.status === 'failed') {
-                    setError(status.error_message || "Generation failed");
-                }
-                addProject(status);
-            } else {
-                attemptsRef.current++;
-                timeoutRef.current = setTimeout(() => pollStatus(projectId), POLLING_INTERVAL);
+            if (initialProject.status === 'failed') {
+                setError(initialProject.error_message || "Generation failed");
             }
-        } catch (err) {
-            console.error("Polling failed", err);
-            setIsGenerating(false);
-            setError("Failed to check status");
+            addProject(initialProject);
+        } else {
+            startPolling(
+                initialProject.project_id,
+                (data) => {
+                    setProject(data);
+                    if (data.status === 'completed') {
+                        setIsGenerating(false);
+                        addProject(data);
+                    } else if (data.status === 'failed') {
+                        setIsGenerating(false);
+                        setError(data.error_message || "Generation failed");
+                    }
+                },
+                (err) => {
+                    setIsGenerating(false);
+                    setError(err.message || "Polling failed");
+                }
+            );
         }
-    }, [addProject]);
+    };
 
     const generateCloning = async (req: Omit<TTSGenerateRequest, 'user_id'>) => {
         if (!userId) {
@@ -73,12 +77,10 @@ export const useTTSGenerator = (userId?: string) => {
         }
         setIsGenerating(true);
         setError(null);
-        attemptsRef.current = 0;
 
         try {
             const result = await chatterboxService.generateTTS({ ...req, user_id: userId });
-            setProject(result);
-            pollStatus(result.project_id);
+            handleGenerationStart(result);
         } catch (err: any) {
             setIsGenerating(false);
             setError(err.response?.data?.detail || err.message || "Failed to start generation");
@@ -92,12 +94,10 @@ export const useTTSGenerator = (userId?: string) => {
         }
         setIsGenerating(true);
         setError(null);
-        attemptsRef.current = 0;
 
         try {
             const result = await chatterboxService.generateMultilingualTTS({ ...req, user_id: userId });
-            setProject(result);
-            pollStatus(result.project_id);
+            handleGenerationStart(result);
         } catch (err: any) {
             setIsGenerating(false);
             setError(err.response?.data?.detail || err.message || "Failed to start generation");
@@ -111,12 +111,10 @@ export const useTTSGenerator = (userId?: string) => {
         }
         setIsGenerating(true);
         setError(null);
-        attemptsRef.current = 0;
 
         try {
             const result = await chatterboxService.convertVoice({ ...req, user_id: userId });
-            setProject(result);
-            pollStatus(result.project_id);
+            handleGenerationStart(result);
         } catch (err: any) {
             setIsGenerating(false);
             setError(err.response?.data?.detail || err.message || "Failed to start conversion");
@@ -133,11 +131,12 @@ export const useTTSGenerator = (userId?: string) => {
         }
     };
 
-    useEffect(() => {
-        return () => {
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        };
-    }, []);
+    const reset = () => {
+        setProject(null);
+        setError(null);
+        setIsGenerating(false);
+        stopPolling();
+    };
 
     return {
         project,
@@ -153,10 +152,6 @@ export const useTTSGenerator = (userId?: string) => {
         generateMultilingual,
         convertVoice,
         deleteProject,
-        reset: () => {
-            setProject(null);
-            setError(null);
-            setIsGenerating(false);
-        }
+        reset
     };
 };

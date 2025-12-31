@@ -7,13 +7,11 @@ import {
     UploadVoiceRequest,
     VoiceConversionRequest,
     SupportedLanguages
-} from '../types/domain/chatterbox';
+} from '../../types/domain/chatterbox';
 
 const AUDIO_BASE = '/audio';
 
 export const chatterboxService = {
-    // --- Voice Library ---
-
     getVoices: async (userId: string, includePublic: boolean = true, limit: number = 20, offset: number = 0): Promise<VoiceSample[]> => {
         const { data } = await avatarApiClient.get<VoiceSample[]>(`${AUDIO_BASE}/voice-library`, {
             params: {
@@ -36,9 +34,7 @@ export const chatterboxService = {
         if (payload.is_public !== undefined) formData.append('is_public', String(payload.is_public));
 
         const { data } = await avatarApiClient.post<VoiceSample>(`${AUDIO_BASE}/voice-library/upload`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
+            headers: { 'Content-Type': 'multipart/form-data' }
         });
         return data;
     },
@@ -48,8 +44,6 @@ export const chatterboxService = {
             params: { user_id: userId }
         });
     },
-
-    // --- TTS Generation ---
 
     generateTTS: async (payload: TTSGenerateRequest): Promise<TTSProject> => {
         const { data } = await avatarApiClient.post<TTSProject>(`${AUDIO_BASE}/chatterbox/tts/generate`, payload);
@@ -68,9 +62,7 @@ export const chatterboxService = {
         formData.append('user_id', payload.user_id);
 
         const { data } = await avatarApiClient.post<TTSProject>(`${AUDIO_BASE}/voice-conversion/convert-upload`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
+            headers: { 'Content-Type': 'multipart/form-data' }
         });
         return data;
     },
@@ -98,29 +90,11 @@ export const chatterboxService = {
 
     getLanguages: async (): Promise<SupportedLanguages> => {
         return {
-            "ar": "Arabic",
-            "da": "Danish",
-            "de": "German",
-            "el": "Greek",
-            "en": "English",
-            "es": "Spanish",
-            "fi": "Finnish",
-            "fr": "French",
-            "he": "Hebrew",
-            "hi": "Hindi",
-            "it": "Italian",
-            "ja": "Japanese",
-            "ko": "Korean",
-            "ms": "Malay",
-            "nl": "Dutch",
-            "no": "Norwegian",
-            "pl": "Polish",
-            "pt": "Portuguese",
-            "ru": "Russian",
-            "sv": "Swedish",
-            "sw": "Swahili",
-            "tr": "Turkish",
-            "zh": "Chinese"
+            "ar": "Arabic", "da": "Danish", "de": "German", "el": "Greek", "en": "English",
+            "es": "Spanish", "fi": "Finnish", "fr": "French", "he": "Hebrew", "hi": "Hindi",
+            "it": "Italian", "ja": "Japanese", "ko": "Korean", "ms": "Malay", "nl": "Dutch",
+            "no": "Norwegian", "pl": "Polish", "pt": "Portuguese", "ru": "Russian", "sv": "Swedish",
+            "sw": "Swahili", "tr": "Turkish", "zh": "Chinese"
         };
     }
 };
