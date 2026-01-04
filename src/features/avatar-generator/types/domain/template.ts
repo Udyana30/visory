@@ -3,6 +3,7 @@ export interface AvatarTemplate {
     user_id: string;
     name: string;
     image_url: string;
+    is_public: boolean;
     created_at: string;
 }
 
@@ -10,4 +11,5 @@ export interface CreateTemplatePayload {
     name: string;
     file: File;
     userId: string;
+    isPublic?: boolean;
 }

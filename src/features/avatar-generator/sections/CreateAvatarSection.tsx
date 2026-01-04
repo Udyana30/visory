@@ -4,7 +4,7 @@ import { AvatarUploader } from '../components/AvatarUploader';
 import { AudioInput } from '../components/AudioInput';
 import { ParameterSettings } from '../components/ParameterSettings';
 import { QualityPresetSelector } from '../components/QualityPresetSelector';
-import { TemplateSelector } from '../components/TemplateSelector';
+import { TemplateModal } from '../components/AvatarTemplates/TemplateModal';
 import { useAvatarActions } from '../hooks/useAvatarActions';
 import { useFileUpload } from '../hooks/useFileUpload';
 import { AvatarParameters } from '../types/domain/project';
@@ -29,6 +29,7 @@ export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSucc
   const [audioFile1, setAudioFile1] = useState<File | null>(null);
   const [audioFile2, setAudioFile2] = useState<File | null>(null);
   const [audioOrder, setAudioOrder] = useState<string>('meanwhile');
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
 
   React.useEffect(() => {
     import('../services/tts/kokoroService').then(({ kokoroService }) => {
@@ -176,27 +177,21 @@ export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSucc
 
               <div className="flex flex-col gap-2 h-full">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Source Image</span>
-                <div className="flex-1 flex flex-col gap-3">
+                <div className="flex-1">
                   <AvatarUploader
                     currentPreview={previewUrl}
                     onFileSelect={handleImageSelect}
+                    onTemplateClick={() => setTemplateModalOpen(true)}
                     disabled={isBusy}
                   />
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-200"></div>
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-gray-500">Or</span>
-                    </div>
-                  </div>
-                  <TemplateSelector
+                  <TemplateModal
+                    isOpen={templateModalOpen}
+                    onClose={() => setTemplateModalOpen(false)}
                     onSelect={(template) => {
                       setImageFile(null);
                       setPreviewUrl(template.image_url);
                     }}
                     selectedId={previewUrl && !imageFile ? undefined : undefined}
-                    disabled={isBusy}
                   />
                 </div>
               </div>

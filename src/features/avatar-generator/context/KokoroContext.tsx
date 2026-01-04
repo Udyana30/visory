@@ -33,6 +33,14 @@ interface KokoroContextType {
     // Mutations
     addProject: (project: KokoroGenerateResponse) => void;
     removeProject: (ttsId: string) => void;
+
+    // Form State
+    text: string;
+    setText: (text: string) => void;
+    speed: number;
+    setSpeed: (speed: number) => void;
+    selectedVoice: KokoroVoice | null;
+    setSelectedVoice: (voice: KokoroVoice | null) => void;
 }
 
 const KokoroContext = createContext<KokoroContextType | undefined>(undefined);
@@ -51,6 +59,11 @@ export const KokoroProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [projects, setProjects] = useState<KokoroGenerateResponse[]>(() => projectsCache.get(cacheKey) || []);
     const [isHistoryLoading, setIsHistoryLoading] = useState(false);
     const [historyError, setHistoryError] = useState<string | null>(null);
+
+    // Form State
+    const [text, setText] = useState('');
+    const [speed, setSpeed] = useState(1.0);
+    const [selectedVoice, setSelectedVoice] = useState<KokoroVoice | null>(null);
 
     // Fetching flags (component-level is fine)
     const isFetchingVoicesRef = useRef(false);
@@ -222,7 +235,13 @@ export const KokoroProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         fetchHistory,
         refreshHistory,
         addProject,
-        removeProject
+        removeProject,
+        text,
+        setText,
+        speed,
+        setSpeed,
+        selectedVoice,
+        setSelectedVoice
     }), [
         voices,
         isVoicesLoading,
@@ -234,7 +253,10 @@ export const KokoroProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         fetchHistory,
         refreshHistory,
         addProject,
-        removeProject
+        removeProject,
+        text,
+        speed,
+        selectedVoice
     ]);
 
     return (

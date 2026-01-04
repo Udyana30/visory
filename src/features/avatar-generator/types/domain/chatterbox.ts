@@ -65,3 +65,23 @@ export interface VoiceConversionRequest {
 export interface SupportedLanguages {
     [key: string]: string;
 }
+
+export interface GeneratorSettings {
+    temperature: number;
+    exaggeration: number;
+    cfgWeight: number | '';
+    repetitionPenalty: number | '';
+    minP: number | '';
+    topP: number | '';
+    selectedLang: string;
+}
+
+export const DEFAULT_GENERATOR_SETTINGS: GeneratorSettings = {
+    temperature: 0.7,
+    exaggeration: 0.5,
+    cfgWeight: 0.5,
+    repetitionPenalty: 1.2,
+    minP: 0.05,
+    topP: 1.0,
+    selectedLang: 'en'
+};

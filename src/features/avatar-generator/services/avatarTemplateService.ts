@@ -21,6 +21,7 @@ export const avatarTemplateService = {
         formData.append('name', payload.name);
         formData.append('file', payload.file);
         formData.append('user_id', payload.userId);
+        formData.append('is_public', String(payload.isPublic || false));
 
         const { data } = await avatarApiClient.post<AvatarTemplate>(`${AVATAR_ENDPOINT}/upload`, formData, {
             headers: {

@@ -641,27 +641,29 @@ export const localStorageService = {
 - [x] Update [hooks/tts/useTTSGenerator.ts](file:///e:/TA/Website/visory/src/features/avatar-generator/hooks/tts/useTTSGenerator.ts)
 
 ### Phase 3: Shared Presentational Components
-- [ ] `shared/HistoryItem.tsx`
-- [ ] `shared/GenerationResult.tsx`
-- [ ] Update [shared/AudioPlayer.tsx](file:///e:/TA/Website/visory/src/features/avatar-generator/components/tts/shared/AudioPlayer.tsx)
+- [x] `shared/HistoryItem.tsx`
+- [x] `shared/GenerationResult.tsx`
+- [x] Update [shared/AudioPlayer.tsx](file:///e:/TA/Website/visory/src/features/avatar-generator/components/tts/shared/AudioPlayer.tsx)
 
 ### Phase 4: Kokoro Components
-- [ ] `kokoro/KokoroGeneratorContainer.tsx`
-- [ ] `kokoro/KokoroGeneratorForm.tsx`
-- [ ] `kokoro/KokoroHistoryContainer.tsx`
-- [ ] `kokoro/KokoroHistoryList.tsx`
+- [x] `kokoro/KokoroGeneratorContainer.tsx`
+- [x] `kokoro/KokoroGeneratorForm.tsx`
+- [x] `kokoro/KokoroHistoryContainer.tsx`
+- [x] `kokoro/KokoroHistoryList.tsx`
 
 ### Phase 5: ChatterBox Components
-- [ ] `chatterbox/ChatterboxGeneratorContainer.tsx`
-- [ ] `chatterbox/ChatterboxGeneratorForm.tsx`
-- [ ] `chatterbox/ChatterboxHistoryContainer.tsx`
-- [ ] `chatterbox/ChatterboxHistoryList.tsx`
-- [ ] `chatterbox/ChatterboxModeSelector.tsx`
-- [ ] `chatterbox/ChatterboxAdvancedSettings.tsx`
+- [x] `chatterbox/ChatterboxGeneratorContainer.tsx`
+- [x] `chatterbox/ChatterboxGeneratorForm.tsx`
+- [x] `chatterbox/ChatterboxHistoryContainer.tsx`
+- [x] `chatterbox/ChatterboxHistoryList.tsx`
+- [x] `chatterbox/ChatterboxModeSelector.tsx`
+- [x] `chatterbox/ChatterboxAdvancedSettings.tsx`
 
 ### Phase 6: Main Components
-- [ ] Update [TTSModal.tsx](file:///e:/TA/Website/visory/src/features/avatar-generator/components/tts/TTSModal.tsx)
-- [ ] Update `TTSEngineSelector.tsx`
+- [x] Update [TTSModal.tsx](file:///e:/TA/Website/visory/src/features/avatar-generator/components/tts/TTSModal.tsx)
+- [x] Create [shared/TTSEngineSelector.tsx](file:///e:/TA/Website/visory/src/features/avatar-generator/components/tts/shared/TTSEngineSelector.tsx)
+- [x] Refactor library folder with SRP/SSOT
+- [x] Remove history folder (redundant with Container components)x`
 
 ### Phase 7: Context & Services
 - [x] Update [TTSContext.tsx](file:///e:/TA/Website/visory/src/features/avatar-generator/context/TTSContext.tsx)

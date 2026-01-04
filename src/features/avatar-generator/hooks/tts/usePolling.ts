@@ -56,7 +56,8 @@ export const usePolling = <T>(
                     if (onError) onError(new Error('Operation failed based on status check'));
                 }
             } catch (error) {
-                console.error('Polling error:', error);
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                console.error('Polling error:', errorMessage, error);
                 stopPolling();
                 if (onError) onError(error);
             }

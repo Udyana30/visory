@@ -13,7 +13,13 @@ export const useKokoro = (userId?: string) => {
         isHistoryLoading,
         addProject,
         removeProject,
-        refreshHistory
+        refreshHistory,
+        text,
+        setText,
+        speed,
+        setSpeed,
+        selectedVoice,
+        setSelectedVoice
     } = useKokoroContext();
 
     const [isGenerating, setIsGenerating] = useState(false);
@@ -75,8 +81,9 @@ export const useKokoro = (userId?: string) => {
     };
 
     const handleGenerationError = (error: any) => {
-        console.error('Kokoro generation error:', error);
-        alert('Failed to generate audio'); // Consider using a toast notification instead
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Kokoro generation error:', errorMessage, error);
+        alert(`Failed to generate audio: ${errorMessage}`);
         setIsGenerating(false);
         setStatus('');
         stopPolling();
@@ -131,6 +138,12 @@ export const useKokoro = (userId?: string) => {
         downloadAudio,
         resetGeneration,
         deleteProject,
-        refreshHistory
+        refreshHistory,
+        text,
+        setText,
+        speed,
+        setSpeed,
+        selectedVoice,
+        setSelectedVoice
     };
 };
