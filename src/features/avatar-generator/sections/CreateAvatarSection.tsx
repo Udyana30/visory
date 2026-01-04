@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Sparkles, AlertCircle, Settings2 } from 'lucide-react';
 import { AvatarUploader } from '../components/AvatarUploader';
 import { AudioInput } from '../components/AudioInput';
 import { ParameterSettings } from '../components/ParameterSettings';
 import { QualityPresetSelector } from '../components/QualityPresetSelector';
 import { TemplateModal } from '../components/AvatarTemplates/TemplateModal';
-import { useAvatarActions } from '../hooks/useAvatarActions';
-import { useFileUpload } from '../hooks/useFileUpload';
-import { AvatarParameters } from '../types/domain/project';
-import { DEFAULT_AVATAR_PARAMS, DEFAULT_AVATAR_PROMPT } from '../constants/defaults';
+import { useAvatarForm } from '../hooks/useAvatarForm';
+import { useAvatarSubmission } from '../hooks/useAvatarSubmission';
+import { validateAvatarForm } from '../utils/avatarValidation';
 import { useAuth } from '@/hooks/useAuth';
 
 interface CreateAvatarSectionProps {
@@ -17,39 +16,24 @@ interface CreateAvatarSectionProps {
 
 export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSuccess }) => {
   const { user } = useAuth();
-  const { createAvatar, isCreating, error: submitError } = useAvatarActions();
-  const { uploadFile, deleteFile, isUploading, error: uploadError } = useFileUpload();
+  const {
+    formState,
+    updateField,
+    updateParams,
+    updateParamsPartial,
+    handleImageSelect,
+    handleTemplateSelect,
+    reset
+  } = useAvatarForm();
 
-  const [title, setTitle] = useState('');
-  const [prompt, setPrompt] = useState(DEFAULT_AVATAR_PROMPT);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | undefined>(undefined);
-  const [params, setParams] = useState<AvatarParameters>(DEFAULT_AVATAR_PARAMS);
+  const { submit, isSubmitting, error } = useAvatarSubmission();
 
-  const [audioFile1, setAudioFile1] = useState<File | null>(null);
-  const [audioFile2, setAudioFile2] = useState<File | null>(null);
-  const [audioOrder, setAudioOrder] = useState<string>('meanwhile');
-  const [templateModalOpen, setTemplateModalOpen] = useState(false);
-
+  // Prefetch TTS voices on mount
   React.useEffect(() => {
     import('../services/tts/kokoroService').then(({ kokoroService }) => {
       kokoroService.getVoices().catch(err => console.error('Failed to prefetch voices:', err));
     });
   }, []);
-
-  const handleImageSelect = (file: File) => {
-    setImageFile(file);
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-  };
-
-  const handleParamChange = (key: keyof AvatarParameters, value: number) => {
-    setParams(prev => ({ ...prev, [key]: value }));
-  };
-
-  const handlePresetSelect = (newParams: Partial<AvatarParameters>) => {
-    setParams(prev => ({ ...prev, ...newParams }));
-  };
 
   const handleSubmit = async () => {
     if (!user?.id) {
@@ -57,85 +41,33 @@ export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSucc
       return;
     }
 
-    if (!title || (!imageFile && !previewUrl) || (!audioFile1 && !audioFile2)) return;
+    const validation = validateAvatarForm(formState);
+    if (!validation.isValid) {
+      return;
+    }
 
     try {
-      // 1. Parallel Upload dengan Error Handling yang Jelas
-      const uploadPromises = [
-        imageFile ? uploadFile(imageFile) : Promise.resolve(null),
-        audioFile1 ? uploadFile(audioFile1) : Promise.resolve(null),
-        audioFile2 ? uploadFile(audioFile2) : Promise.resolve(null),
-      ];
-
-      const [imageResult, audioResult1, audioResult2] = await Promise.all(uploadPromises);
-
-      const uploadedImageUrl = imageResult?.url;
-      const uploadedAudioUrl1 = audioResult1?.url;
-      const uploadedAudioUrl2 = audioResult2?.url;
-
-      // 2. Validasi Hasil Upload
-      if (imageFile && !uploadedImageUrl) throw new Error("Failed to upload source image.");
-      if (audioFile1 && !uploadedAudioUrl1) throw new Error("Failed to upload primary audio.");
-      if (audioFile2 && !uploadedAudioUrl2) throw new Error("Failed to upload secondary audio.");
-
-      // Determine final image URL: either from upload or existing preview (template)
-      const finalImageUrl = imageFile ? uploadedImageUrl : previewUrl;
-      if (!finalImageUrl) throw new Error("No image source available.");
-
-      // Pastikan minimal 1 aset audio tersedia
-      const finalAudioUrl = uploadedAudioUrl1 || uploadedAudioUrl2;
-      if (!finalAudioUrl) throw new Error("No audio uploaded.");
-
-      const isMultiPerson = !!uploadedAudioUrl1 && !!uploadedAudioUrl2;
-
-      // 3. Create Project
-      await createAvatar({
+      await submit({
         userId: user.id,
-        title,
-        prompt,
-        imageUrl: finalImageUrl,
-        audioUrl: finalAudioUrl,
-        parameters: params,
-        type: isMultiPerson ? 'multi_person' : 'single_person',
-        audioOrder: isMultiPerson ? audioOrder : undefined,
-        // Pass audio 2 via any/custom field sesuai service
-        ...(isMultiPerson && { audioUrl2: uploadedAudioUrl2 } as any)
+        title: formState.title,
+        prompt: formState.prompt,
+        imageFile: formState.imageFile,
+        previewUrl: formState.previewUrl,
+        audioFile1: formState.audioFile1,
+        audioFile2: formState.audioFile2,
+        audioOrder: formState.audioOrder,
+        params: formState.params
       });
 
-      // 4. Cleanup Cloudinary Files (Auto Delete)
-      const filesToDelete = [
-        imageResult?.id_file,
-        audioResult1?.id_file,
-        audioResult2?.id_file
-      ].filter((id): id is string => !!id);
-
-      if (filesToDelete.length > 0) {
-        // Jalankan delete di background agar tidak memblokir UI
-        Promise.all(filesToDelete.map(id => deleteFile(id)))
-          .catch(err => console.error("Failed to cleanup files:", err));
-      }
-
+      reset();
       onSuccess();
-
-      // Reset State
-      setTitle('');
-      setPrompt(DEFAULT_AVATAR_PROMPT);
-      setImageFile(null);
-      setAudioFile1(null);
-      setAudioFile2(null);
-      setPreviewUrl(undefined);
-      setAudioOrder('meanwhile');
-      setParams(DEFAULT_AVATAR_PARAMS);
-
     } catch (err) {
-      console.error('Submission Process Failed:', err);
-      // Error akan ditangani oleh state `error` dari hooks
+      console.error('Submission failed:', err);
     }
   };
 
-  const isReady = (imageFile || previewUrl) && (audioFile1 || audioFile2) && title.trim().length > 0;
-  const isBusy = isCreating || isUploading;
-  const error = submitError || uploadError;
+  const validation = validateAvatarForm(formState);
+  const isReady = validation.isValid && !!user?.id;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full">
@@ -149,9 +81,9 @@ export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSucc
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5 ml-0.5">Project Title</label>
                 <input
                   type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  disabled={isBusy}
+                  value={formState.title}
+                  onChange={(e) => updateField('title', e.target.value)}
+                  disabled={isSubmitting}
                   placeholder="e.g., Dual Conversation V1"
                   className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-sm text-gray-900 placeholder-gray-400"
                 />
@@ -159,9 +91,9 @@ export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSucc
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5 ml-0.5">System Prompt</label>
                 <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  disabled={isBusy}
+                  value={formState.prompt}
+                  onChange={(e) => updateField('prompt', e.target.value)}
+                  disabled={isSubmitting}
                   rows={2}
                   placeholder="Describe facial expressions and behavior..."
                   className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-sm text-gray-900 placeholder-gray-400 resize-none"
@@ -179,19 +111,16 @@ export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSucc
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Source Image</span>
                 <div className="flex-1">
                   <AvatarUploader
-                    currentPreview={previewUrl}
+                    currentPreview={formState.previewUrl}
                     onFileSelect={handleImageSelect}
-                    onTemplateClick={() => setTemplateModalOpen(true)}
-                    disabled={isBusy}
+                    onTemplateClick={() => updateField('templateModalOpen', true)}
+                    disabled={isSubmitting}
                   />
                   <TemplateModal
-                    isOpen={templateModalOpen}
-                    onClose={() => setTemplateModalOpen(false)}
-                    onSelect={(template) => {
-                      setImageFile(null);
-                      setPreviewUrl(template.image_url);
-                    }}
-                    selectedId={previewUrl && !imageFile ? undefined : undefined}
+                    isOpen={formState.templateModalOpen}
+                    onClose={() => updateField('templateModalOpen', false)}
+                    onSelect={(template) => handleTemplateSelect(template.image_url)}
+                    selectedId={formState.previewUrl && !formState.imageFile ? undefined : undefined}
                   />
                 </div>
               </div>
@@ -200,15 +129,15 @@ export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSucc
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Voice Input</span>
                 <div className="flex-1">
                   <AudioInput
-                    file1={audioFile1}
-                    file2={audioFile2}
-                    onSetFile1={setAudioFile1}
-                    onSetFile2={setAudioFile2}
-                    onClear1={() => setAudioFile1(null)}
-                    onClear2={() => setAudioFile2(null)}
-                    audioOrder={audioOrder}
-                    setAudioOrder={setAudioOrder}
-                    disabled={isBusy}
+                    file1={formState.audioFile1}
+                    file2={formState.audioFile2}
+                    onSetFile1={(file) => updateField('audioFile1', file)}
+                    onSetFile2={(file) => updateField('audioFile2', file)}
+                    onClear1={() => updateField('audioFile1', null)}
+                    onClear2={() => updateField('audioFile2', null)}
+                    audioOrder={formState.audioOrder}
+                    setAudioOrder={(order) => updateField('audioOrder', order)}
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -217,9 +146,9 @@ export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSucc
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Quality Preset</span>
                 <div className="flex-1 border border-gray-200 rounded-xl p-3 bg-gray-50/30 overflow-hidden">
                   <QualityPresetSelector
-                    currentParams={params}
-                    onSelect={handlePresetSelect}
-                    disabled={isBusy}
+                    currentParams={formState.params}
+                    onSelect={updateParamsPartial}
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -236,9 +165,9 @@ export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSucc
 
           <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
             <ParameterSettings
-              settings={params}
-              onChange={handleParamChange}
-              disabled={isBusy}
+              settings={formState.params}
+              onChange={updateParams}
+              disabled={isSubmitting}
             />
           </div>
 
@@ -252,13 +181,13 @@ export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSucc
 
             <button
               onClick={handleSubmit}
-              disabled={!isReady || isBusy || !user?.id}
+              disabled={!isReady || isSubmitting}
               className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm tracking-wide"
             >
-              {isBusy ? (
+              {isSubmitting ? (
                 <>
                   <Sparkles className="w-4 h-4 animate-pulse" />
-                  {isUploading ? 'Uploading Assets...' : 'Generating Project...'}
+                  Processing...
                 </>
               ) : (
                 <>

@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AvatarProject } from '../types/domain/project';
 import { avatarProjectService } from '../services/avatarProjectService';
-import { POLLING_INTERVAL, MAX_POLLING_ATTEMPTS } from '../constants/defaults';
+
+const POLLING_INTERVAL = 5000;
+const MAX_POLLING_ATTEMPTS = 200;
 
 interface UseAvatarPollingProps {
   initialProject: AvatarProject;
@@ -21,6 +23,7 @@ export const useAvatarPolling = ({ initialProject, onComplete }: UseAvatarPollin
     if (!isPolling) return;
 
     if (attemptsRef.current >= MAX_POLLING_ATTEMPTS) {
+      console.warn('Max polling attempts reached for project:', project.id);
       setIsPolling(false);
       return;
     }
@@ -43,12 +46,15 @@ export const useAvatarPolling = ({ initialProject, onComplete }: UseAvatarPollin
           onComplete({ ...project, ...update });
         }
       } else {
+        // Continue polling
         attemptsRef.current += 1;
         timeoutRef.current = setTimeout(checkStatus, POLLING_INTERVAL);
       }
     } catch (error) {
-      console.error('Polling failed', error);
-      setIsPolling(false);
+      console.error('Polling failed for project:', project.id, error);
+      // Retry dengan backoff
+      attemptsRef.current += 1;
+      timeoutRef.current = setTimeout(checkStatus, POLLING_INTERVAL * 2);
     }
   }, [isPolling, project.id, onComplete, project]);
 

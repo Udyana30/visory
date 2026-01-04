@@ -11,6 +11,7 @@ export interface UseVoiceLibraryResult {
     refresh: () => Promise<void>;
     uploadVoice: (file: File, name: string, description?: string, isPublic?: boolean) => Promise<void>;
     deleteVoice: (voiceId: string) => Promise<void>;
+    addVoice: (voice: VoiceSample) => void;
 }
 
 export const useVoiceLibrary = (userId?: string): UseVoiceLibraryResult => {

@@ -4,8 +4,8 @@ interface ActionButtonProps {
     icon: React.ReactNode;
     label: string;
     onClick: () => void;
-    onMouseEnter: () => void;
-    onMouseLeave: () => void;
+    onMouseEnter?: () => void;
+    onMouseLeave?: () => void;
     disabled?: boolean;
     variant: 'blue' | 'red' | 'purple';
     size?: 'sm' | 'md';

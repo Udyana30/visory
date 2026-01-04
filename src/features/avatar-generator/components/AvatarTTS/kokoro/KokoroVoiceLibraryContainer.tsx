@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useKokoroContext } from '../../../context/KokoroContext';
 import { VoiceLibraryFilters } from '../shared/library/VoiceLibraryFilters';
 import { VoiceLibraryGrid } from '../shared/library/VoiceLibraryGrid';
+import { useAudioPlayer } from '../../../hooks/tts/useAudioPlayer';
 
 interface KokoroVoiceLibraryContainerProps {
     selectedId?: string;
@@ -16,9 +17,17 @@ export const KokoroVoiceLibraryContainer: React.FC<KokoroVoiceLibraryContainerPr
     onBack
 }) => {
     const { voices, isVoicesLoading } = useKokoroContext();
+    const { playingId, toggle: toggleAudio, stop: stopAudio } = useAudioPlayer();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedGender, setSelectedGender] = useState<'all' | 'male' | 'female'>('all');
     const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
+
+    // Stop audio when component unmounts
+    useEffect(() => {
+        return () => {
+            stopAudio();
+        };
+    }, [stopAudio]);
 
     const languages = useMemo(() => {
         const langs = new Set(voices.map(v => v.language));
@@ -37,6 +46,10 @@ export const KokoroVoiceLibraryContainer: React.FC<KokoroVoiceLibraryContainerPr
     const handleSelect = (voiceId: string) => {
         onSelect(voiceId);
         onBack();
+    };
+
+    const handlePlay = (audioUrl: string, voiceId: string) => {
+        toggleAudio(audioUrl, voiceId);
     };
 
     return (
@@ -77,12 +90,15 @@ export const KokoroVoiceLibraryContainer: React.FC<KokoroVoiceLibraryContainerPr
                         id: v.id,
                         name: v.name,
                         gender: v.gender,
-                        language: v.language
+                        language: v.language,
+                        audioUrl: v.preview_url
                     }))}
                     selectedId={selectedId}
                     onSelect={handleSelect}
                     isLoading={isVoicesLoading}
                     accentColor="indigo"
+                    onPlay={handlePlay}
+                    playingId={playingId}
                 />
             </div>
         </div>

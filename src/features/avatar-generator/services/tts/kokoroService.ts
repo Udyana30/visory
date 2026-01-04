@@ -29,7 +29,8 @@ export const kokoroService = {
             name: v.name,
             gender: v.gender,
             language: languageMap[v.lang] || v.lang,
-            langCode: v.lang
+            langCode: v.lang,
+            preview_url: v.preview_url
         }));
 
         voicesCache = mappedVoices;

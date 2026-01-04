@@ -17,6 +17,7 @@ interface VoiceLibraryContextType {
     refresh: () => Promise<void>;
     uploadVoice: (file: File, name: string, description?: string, isPublic?: boolean) => Promise<void>;
     deleteVoice: (voiceId: string) => Promise<void>;
+    addVoice: (voice: VoiceSample) => void; // Optimistic update
 }
 
 const VoiceLibraryContext = createContext<VoiceLibraryContextType | undefined>(undefined);
@@ -129,6 +130,18 @@ export const VoiceLibraryProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
     };
 
+    const addVoice = useCallback((voice: VoiceSample) => {
+        setVoices(prev => {
+            // Check if voice already exists
+            const exists = prev.some(v => v.voice_sample_id === voice.voice_sample_id);
+            if (exists) {
+                return prev;
+            }
+            // Add to beginning of list
+            return [voice, ...prev];
+        });
+    }, []);
+
     // Initial fetch
     useEffect(() => {
         if (userId && !initializedRef.current) {
@@ -159,7 +172,8 @@ export const VoiceLibraryProvider: React.FC<{ children: React.ReactNode }> = ({ 
             loadMore: () => fetchVoices(false),
             refresh: () => fetchVoices(true),
             uploadVoice,
-            deleteVoice
+            deleteVoice,
+            addVoice
         }}>
             {children}
         </VoiceLibraryContext.Provider>

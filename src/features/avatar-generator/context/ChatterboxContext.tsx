@@ -138,15 +138,18 @@ export const ChatterboxProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
             setProjects(prev => {
                 const currentProjects = reset ? [] : prev;
-                const existingIds = new Set(currentProjects.map(p => p.project_id));
-                const uniqueNewProjects = data.filter(p => !existingIds.has(p.project_id));
 
-                if (!reset && data.length > 0 && uniqueNewProjects.length === 0) {
-                    setHasMore(false);
-                    return currentProjects;
-                }
+                // Use Map to ensure uniqueness by project_id
+                const projectMap = new Map<string, TTSProject>();
 
-                const combined = [...currentProjects, ...uniqueNewProjects];
+                // Add existing projects to map
+                currentProjects.forEach(p => projectMap.set(p.project_id, p));
+
+                // Add/Update with new projects
+                data.forEach(p => projectMap.set(p.project_id, p));
+
+                // Convert back to array and sort
+                const combined = Array.from(projectMap.values());
                 const sorted = combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
                 projectsCache.set(cacheKey, sorted);
@@ -186,7 +189,9 @@ export const ChatterboxProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     const addProject = useCallback((project: TTSProject) => {
         setProjects(prev => {
-            const newProjects = [project, ...prev];
+            // Remove existing project with same ID if it exists (to update it)
+            const filtered = prev.filter(p => p.project_id !== project.project_id);
+            const newProjects = [project, ...filtered];
             projectsCache.set(cacheKey, newProjects);
             return newProjects;
         });

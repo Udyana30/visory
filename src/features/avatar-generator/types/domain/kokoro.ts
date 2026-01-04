@@ -4,6 +4,7 @@ export interface KokoroVoice {
     gender: 'male' | 'female';
     language: string;
     langCode: string;
+    preview_url?: string;
 }
 
 export interface KokoroLanguage {

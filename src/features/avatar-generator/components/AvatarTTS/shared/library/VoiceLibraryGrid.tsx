@@ -7,6 +7,7 @@ interface Voice {
     name: string;
     gender?: string;
     language?: string;
+    audioUrl?: string;
 }
 
 interface VoiceLibraryGridProps {
@@ -15,6 +16,8 @@ interface VoiceLibraryGridProps {
     onSelect: (id: string) => void;
     isLoading?: boolean;
     accentColor?: 'indigo' | 'blue';
+    onPlay?: (audioUrl: string, id: string) => void;
+    playingId?: string | null;
 }
 
 export const VoiceLibraryGrid: React.FC<VoiceLibraryGridProps> = ({
@@ -22,7 +25,9 @@ export const VoiceLibraryGrid: React.FC<VoiceLibraryGridProps> = ({
     selectedId,
     onSelect,
     isLoading = false,
-    accentColor = 'indigo'
+    accentColor = 'indigo',
+    onPlay,
+    playingId
 }) => {
     if (isLoading && voices.length === 0) {
         return (
@@ -55,6 +60,9 @@ export const VoiceLibraryGrid: React.FC<VoiceLibraryGridProps> = ({
                     isSelected={selectedId === voice.id}
                     onSelect={onSelect}
                     accentColor={accentColor}
+                    audioUrl={voice.audioUrl}
+                    onPlay={onPlay}
+                    isPlaying={playingId === voice.id}
                 />
             ))}
         </div>
