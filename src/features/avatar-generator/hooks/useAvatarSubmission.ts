@@ -7,6 +7,7 @@ import { getAvatarType } from '../utils/avatarValidation';
 interface SubmitData {
     userId: string;
     title: string;
+    description?: string;
     prompt: string;
     imageFile: File | null;
     previewUrl: string | undefined;
@@ -72,6 +73,7 @@ export const useAvatarSubmission = () => {
             await createAvatar({
                 userId: data.userId,
                 title: data.title,
+                description: data.description,
                 prompt: data.prompt,
                 imageUrl: finalImageUrl,
                 audioUrl: finalAudioUrl,

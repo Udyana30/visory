@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import SpeechToTextPage from '@/app/(main)/tools/speech-to-text/page';
+import { SpeechToText } from '@/features/speech-to-text/SpeechToText';
 import { sttService } from '@/services/sttService';
 
 // 1. Mock Service
@@ -49,13 +49,13 @@ describe('White Box - STT Page Integration', () => {
       language: 'id',
       created_at: new Date().toISOString(),
     };
-    
+
     (sttService.createSTT as jest.Mock).mockResolvedValue({
       message: 'Success',
       data: mockResultData
     });
 
-    render(<SpeechToTextPage />);
+    render(<SpeechToText />);
 
     // B. PENTING: Tunggu fetch history awal selesai untuk mencegah act() warning
     await waitFor(() => expect(sttService.getSTT).toHaveBeenCalled());
@@ -93,8 +93,8 @@ describe('White Box - STT Page Integration', () => {
     // A. Setup Mock Error
     (sttService.createSTT as jest.Mock).mockRejectedValue(new Error('Gagal memproses audio'));
 
-    render(<SpeechToTextPage />);
-    
+    render(<SpeechToText />);
+
     // B. Tunggu load awal
     await waitFor(() => expect(sttService.getSTT).toHaveBeenCalled());
 
@@ -102,7 +102,7 @@ describe('White Box - STT Page Integration', () => {
     const file = new File(['audio'], 'fail.mp3', { type: 'audio/mpeg' });
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(fileInput, { target: { files: [file] } });
-    
+
     fireEvent.change(screen.getByLabelText(/project title/i), { target: { value: 'Project Gagal' } });
 
     // D. Klik Generate

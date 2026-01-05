@@ -38,6 +38,8 @@ export const HistorySection: React.FC = () => {
     setSearchQuery,
     statusFilter,
     setStatusFilter,
+    typeFilter,
+    setTypeFilter,
     sortBy,
     setSortBy,
     filteredProjects,
@@ -78,6 +80,8 @@ export const HistorySection: React.FC = () => {
             onSearchChange={setSearchQuery}
             statusFilter={statusFilter}
             onStatusChange={setStatusFilter}
+            typeFilter={typeFilter}
+            onTypeChange={setTypeFilter}
             sortBy={sortBy}
             onSortChange={setSortBy}
             onReset={resetFilters}

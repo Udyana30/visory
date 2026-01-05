@@ -4,6 +4,7 @@ import { DEFAULT_AVATAR_PARAMS, DEFAULT_AVATAR_PROMPT } from '../constants/defau
 
 interface AvatarFormState {
     title: string;
+    description: string;
     prompt: string;
     imageFile: File | null;
     previewUrl: string | undefined;
@@ -16,6 +17,7 @@ interface AvatarFormState {
 
 const initialFormState: AvatarFormState = {
     title: '',
+    description: '',
     prompt: DEFAULT_AVATAR_PROMPT,
     imageFile: null,
     previewUrl: undefined,

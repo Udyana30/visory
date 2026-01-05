@@ -1,12 +1,14 @@
 import React from 'react';
 import { Search, Filter, X } from 'lucide-react';
-import { SortOption, FilterStatus } from '../utils/projectFilters';
+import { SortOption, FilterStatus, FilterType } from '../utils/projectFilters';
 
 interface FilterControlsProps {
     searchQuery: string;
     onSearchChange: (query: string) => void;
     statusFilter: FilterStatus;
     onStatusChange: (status: FilterStatus) => void;
+    typeFilter: FilterType;
+    onTypeChange: (type: FilterType) => void;
     sortBy: SortOption;
     onSortChange: (sort: SortOption) => void;
     onReset: () => void;
@@ -17,12 +19,14 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
     onSearchChange,
     statusFilter,
     onStatusChange,
+    typeFilter,
+    onTypeChange,
     sortBy,
     onSortChange,
     onReset
 }) => {
     const [showFilters, setShowFilters] = React.useState(false);
-    const hasActiveFilters = searchQuery || statusFilter !== 'all' || sortBy !== 'date-desc';
+    const hasActiveFilters = searchQuery || statusFilter !== 'all' || typeFilter !== 'all' || sortBy !== 'date-desc';
 
     return (
         <div className="flex items-center gap-2">
@@ -66,6 +70,22 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
                 {showFilters && (
                     <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-10 animate-in fade-in slide-in-from-top-2 duration-200">
                         <div className="p-4 space-y-3">
+                            {/* Avatar Type Filter */}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-900 mb-1.5">
+                                    Avatar Type
+                                </label>
+                                <select
+                                    value={typeFilter}
+                                    onChange={(e) => onTypeChange(e.target.value as FilterType)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                >
+                                    <option value="all">All Types</option>
+                                    <option value="single_person">Solo Avatar</option>
+                                    <option value="multi_person">Duo Avatar</option>
+                                </select>
+                            </div>
+
                             {/* Status Filter */}
                             <div>
                                 <label className="block text-xs font-semibold text-gray-900 mb-1.5">
@@ -74,7 +94,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
                                 <select
                                     value={statusFilter}
                                     onChange={(e) => onStatusChange(e.target.value as FilterStatus)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                                 >
                                     <option value="all">All Status</option>
                                     <option value="finished">Completed</option>
@@ -92,7 +112,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
                                 <select
                                     value={sortBy}
                                     onChange={(e) => onSortChange(e.target.value as SortOption)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                                 >
                                     <option value="date-desc">Newest First</option>
                                     <option value="date-asc">Oldest First</option>

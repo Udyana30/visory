@@ -50,6 +50,7 @@ export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSucc
       await submit({
         userId: user.id,
         title: formState.title,
+        description: formState.description,
         prompt: formState.prompt,
         imageFile: formState.imageFile,
         previewUrl: formState.previewUrl,
@@ -77,6 +78,7 @@ export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSucc
           <div className="p-6 pb-4">
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Project Configuration</h3>
             <div className="space-y-4">
+              {/* Project Title */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5 ml-0.5">Project Title</label>
                 <input
@@ -88,16 +90,31 @@ export const CreateAvatarSection: React.FC<CreateAvatarSectionProps> = ({ onSucc
                   className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-sm text-gray-900 placeholder-gray-400"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5 ml-0.5">System Prompt</label>
-                <textarea
-                  value={formState.prompt}
-                  onChange={(e) => updateField('prompt', e.target.value)}
-                  disabled={isSubmitting}
-                  rows={2}
-                  placeholder="Describe facial expressions and behavior..."
-                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-sm text-gray-900 placeholder-gray-400 resize-none"
-                />
+
+              {/* Description & System Prompt - Side by Side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5 ml-0.5">Description</label>
+                  <textarea
+                    value={formState.description}
+                    onChange={(e) => updateField('description', e.target.value)}
+                    disabled={isSubmitting}
+                    rows={2}
+                    placeholder="Add notes or context about this project"
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-sm text-gray-900 placeholder-gray-400 resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5 ml-0.5">System Prompt</label>
+                  <textarea
+                    value={formState.prompt}
+                    onChange={(e) => updateField('prompt', e.target.value)}
+                    disabled={isSubmitting}
+                    rows={2}
+                    placeholder="Describe facial expressions and behavior..."
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-sm text-gray-900 placeholder-gray-400 resize-none"
+                  />
+                </div>
               </div>
             </div>
           </div>

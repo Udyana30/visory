@@ -29,6 +29,7 @@ export const avatarProjectService = {
     const requestBody: ApiCreateAvatarRequest = {
       user_id: String(payload.userId),
       title: payload.title,
+      description: payload.description,
       prompt: payload.prompt || DEFAULT_AVATAR_PROMPT,
       image_url: payload.imageUrl,
       audio_url: payload.audioUrl,

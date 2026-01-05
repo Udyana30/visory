@@ -1,12 +1,14 @@
-import { AvatarProject, AvatarStatus } from '../types/domain/project';
+import { AvatarProject } from '../types/domain/project';
 
 export type SortOption = 'date-desc' | 'date-asc' | 'duration-desc' | 'duration-asc';
-export type FilterStatus = 'all' | AvatarStatus;
+export type FilterStatus = 'all' | 'queued' | 'processing' | 'finished' | 'failed';
+export type FilterType = 'all' | 'single_person' | 'multi_person';
 
 export const filterProjects = (
     projects: AvatarProject[],
     searchQuery: string,
     statusFilter: FilterStatus,
+    typeFilter: FilterType,
     sortBy: SortOption
 ): AvatarProject[] => {
     let filtered = [...projects];
@@ -15,13 +17,19 @@ export const filterProjects = (
     if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         filtered = filtered.filter(project =>
-            project.title?.toLowerCase().includes(query)
+            project.title?.toLowerCase().includes(query) ||
+            project.description?.toLowerCase().includes(query)
         );
     }
 
     // Status filter
     if (statusFilter !== 'all') {
         filtered = filtered.filter(project => project.status === statusFilter);
+    }
+
+    // Type filter
+    if (typeFilter !== 'all') {
+        filtered = filtered.filter(project => project.type === typeFilter);
     }
 
     // Sort

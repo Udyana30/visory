@@ -102,7 +102,8 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
 
   return (
     <>
-      <div className="h-full w-full">
+      {/* Fixed Size Container */}
+      <div className="w-full aspect-[3/4] min-h-[280px]">
         <div
           onDragOver={handleDragOver}
           onDrop={handleDrop}
@@ -126,11 +127,11 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
               <img
                 src={currentPreview}
                 alt="Avatar Preview"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover rounded-xl"
               />
 
               {/* Hover Overlay dengan smooth transition */}
-              <div className={`absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center transition-all duration-300 ease-in-out ${showOverlay ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              <div className={`absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center transition-all duration-300 ease-in-out rounded-xl ${showOverlay ? 'opacity-100' : 'opacity-0 pointer-events-none'
                 }`}>
                 <div className={`flex flex-col gap-2 w-full max-w-[160px] px-4 transition-transform duration-300 ease-out ${showOverlay ? 'translate-y-0 scale-100' : 'translate-y-2 scale-95'
                   }`}>

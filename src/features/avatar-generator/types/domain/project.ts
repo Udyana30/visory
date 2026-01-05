@@ -13,6 +13,7 @@ export interface AvatarParameters {
 export interface AvatarProject {
   id: string;
   title: string;
+  description?: string;
   imageUrl: string;
   audioUrl: string;
   status: AvatarStatus;
@@ -23,15 +24,17 @@ export interface AvatarProject {
   createdAt: Date;
   updatedAt: Date;
   parameters?: AvatarParameters;
+  type?: 'single_person' | 'multi_person';
 }
 
 export interface CreateAvatarPayload {
   title: string;
+  description?: string;
   prompt: string;
   imageUrl: string;
   audioUrl: string;
   parameters: AvatarParameters;
-  userId?: string; 
+  userId?: string;
   imageFile?: File;
   audioFile?: File;
   type?: 'single_person' | 'multi_person';
