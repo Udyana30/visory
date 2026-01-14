@@ -16,6 +16,11 @@ export const mapToDomain = (apiData: ApiAvatarProject): AvatarProject => {
     createdAt: new Date(apiData.created_at),
     updatedAt: new Date(apiData.updated_at),
     type: apiData.type,
+
+    // Multi-Stage Pipeline Mapping
+    currentStage: apiData.current_stage || undefined,
+    pipeline: apiData.pipeline || undefined,
+
     parameters: apiData.parameters ? {
       sampleSteps: apiData.parameters.sample_steps,
       sampleShift: apiData.parameters.sample_shift,

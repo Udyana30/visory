@@ -1,3 +1,5 @@
+import { Pipeline, PipelineStageKey } from './pipeline';
+
 export type ApiAvatarStatus = 'queued' | 'processing' | 'finished' | 'failed';
 
 export interface ApiAvatarParameters {
@@ -29,6 +31,10 @@ export interface ApiAvatarProject {
   type?: 'single_person' | 'multi_person';
   audio_order?: string | null;
   audio_url_2?: string | null;
+
+  // Multi-Stage Pipeline Support
+  current_stage: PipelineStageKey | null;
+  pipeline: Pipeline | null;
 }
 
 export interface ApiAvatarStatusResponse {
@@ -37,4 +43,8 @@ export interface ApiAvatarStatusResponse {
   progress: number;
   video_url: string | null;
   error_message: string | null;
+
+  // Multi-Stage Pipeline Support
+  current_stage?: PipelineStageKey | null;
+  pipeline?: Pipeline | null;
 }

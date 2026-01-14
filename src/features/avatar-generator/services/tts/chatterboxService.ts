@@ -1,4 +1,5 @@
 import { avatarApiClient } from '@/lib/apiClient';
+import { PaginatedResponse, PaginationParams } from '../../types/api/pagination';
 import {
     VoiceSample,
     TTSProject,
@@ -10,18 +11,38 @@ import {
 } from '../../types/domain/chatterbox';
 
 const AUDIO_BASE = '/audio';
+const DEFAULT_PAGE_LIMIT = 10;
 
 export const chatterboxService = {
-    getVoices: async (userId: string, includePublic: boolean = true, limit: number = 20, offset: number = 0): Promise<VoiceSample[]> => {
-        const { data } = await avatarApiClient.get<VoiceSample[]>(`${AUDIO_BASE}/voice-library`, {
+    getVoicesPage: async (
+        userId: string,
+        includePublic: boolean = true,
+        params?: PaginationParams
+    ): Promise<PaginatedResponse<VoiceSample>> => {
+        const { data } = await avatarApiClient.get<PaginatedResponse<VoiceSample>>(`${AUDIO_BASE}/voice-library`, {
             params: {
                 user_id: userId,
                 include_public: String(includePublic),
-                limit,
-                offset
+                limit: params?.limit || DEFAULT_PAGE_LIMIT,
+                ...(params?.cursor && { cursor: params.cursor })
             }
         });
         return data;
+    },
+
+    getVoices: async (userId: string, includePublic: boolean = true): Promise<VoiceSample[]> => {
+        const allVoices: VoiceSample[] = [];
+        let cursor: string | null = null;
+        let hasMore = true;
+
+        while (hasMore) {
+            const page = await chatterboxService.getVoicesPage(userId, includePublic, { cursor, limit: DEFAULT_PAGE_LIMIT });
+            allVoices.push(...page.items);
+            cursor = page.next_cursor;
+            hasMore = page.has_more;
+        }
+
+        return allVoices;
     },
 
     uploadVoice: async (payload: UploadVoiceRequest): Promise<VoiceSample> => {
@@ -76,16 +97,35 @@ export const chatterboxService = {
         await avatarApiClient.delete(`${AUDIO_BASE}/chatterbox/projects/${projectId}`);
     },
 
-    getProjects: async (userId: string, projectType?: TTSProject['project_type'], limit: number = 50, offset: number = 0): Promise<TTSProject[]> => {
-        const { data } = await avatarApiClient.get<TTSProject[]>(`${AUDIO_BASE}/chatterbox/projects`, {
+    getProjectsPage: async (
+        userId: string,
+        projectType?: TTSProject['project_type'],
+        params?: PaginationParams
+    ): Promise<PaginatedResponse<TTSProject>> => {
+        const { data } = await avatarApiClient.get<PaginatedResponse<TTSProject>>(`${AUDIO_BASE}/chatterbox/projects`, {
             params: {
                 user_id: userId,
-                project_type: projectType,
-                limit,
-                offset
+                ...(projectType && { project_type: projectType }),
+                limit: params?.limit || DEFAULT_PAGE_LIMIT,
+                ...(params?.cursor && { cursor: params.cursor })
             }
         });
         return data;
+    },
+
+    getProjects: async (userId: string, projectType?: TTSProject['project_type']): Promise<TTSProject[]> => {
+        const allProjects: TTSProject[] = [];
+        let cursor: string | null = null;
+        let hasMore = true;
+
+        while (hasMore) {
+            const page = await chatterboxService.getProjectsPage(userId, projectType, { cursor, limit: DEFAULT_PAGE_LIMIT });
+            allProjects.push(...page.items);
+            cursor = page.next_cursor;
+            hasMore = page.has_more;
+        }
+
+        return allProjects;
     },
 
     getLanguages: async (): Promise<SupportedLanguages> => {

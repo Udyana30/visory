@@ -1,3 +1,5 @@
+import { Pipeline, PipelineStageKey } from '../api/pipeline';
+
 export type AvatarStatus = 'queued' | 'processing' | 'finished' | 'failed';
 
 export interface AvatarParameters {
@@ -25,6 +27,10 @@ export interface AvatarProject {
   updatedAt: Date;
   parameters?: AvatarParameters;
   type?: 'single_person' | 'multi_person';
+
+  // Multi-Stage Pipeline Support
+  currentStage?: PipelineStageKey;
+  pipeline?: Pipeline;
 }
 
 export interface CreateAvatarPayload {

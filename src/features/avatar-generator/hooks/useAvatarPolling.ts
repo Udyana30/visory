@@ -38,6 +38,10 @@ export const useAvatarPolling = ({ initialProject, onComplete }: UseAvatarPollin
         videoUrl: update.videoUrl,
         hasError: update.hasError,
         errorMessage: update.errorMessage,
+
+        // Multi-Stage Pipeline Support
+        currentStage: update.currentStage,
+        pipeline: update.pipeline,
       }));
 
       if (update.status === 'finished' || update.status === 'failed') {

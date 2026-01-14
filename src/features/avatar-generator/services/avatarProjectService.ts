@@ -1,21 +1,66 @@
 import { avatarApiClient } from '@/lib/apiClient';
 import { ApiAvatarProject, ApiAvatarStatusResponse } from '../types/api/project';
+import { PaginatedResponse, PaginationParams } from '../types/api/pagination';
 import { AvatarProject, CreateAvatarPayload } from '../types/domain/project';
 import { mapToDomain } from '../utils/avatarMapper';
 import { DEFAULT_AVATAR_PROMPT } from '../constants/defaults';
 import { ApiCreateAvatarRequest } from '../types/api/request';
 
 const PROJECT_ENDPOINT = '/projects/';
+const DEFAULT_PAGE_LIMIT = 10;
 
 export const avatarProjectService = {
+  /**
+   * Get paginated projects dengan cursor-based pagination
+   * @param userId - User ID
+   * @param params - Pagination parameters (limit, cursor)
+   * @returns Paginated response dengan items, next_cursor, has_more
+   */
+  getPage: async (
+    userId: string,
+    params?: PaginationParams
+  ): Promise<PaginatedResponse<AvatarProject>> => {
+    if (!userId) throw new Error('User ID is required');
+
+    const { data } = await avatarApiClient.get<PaginatedResponse<ApiAvatarProject>>(
+      PROJECT_ENDPOINT,
+      {
+        params: {
+          user_id: userId,
+          limit: params?.limit || DEFAULT_PAGE_LIMIT,
+          ...(params?.cursor && { cursor: params.cursor })
+        }
+      }
+    );
+
+    return {
+      items: data.items.map(mapToDomain),
+      next_cursor: data.next_cursor,
+      has_more: data.has_more
+    };
+  },
+
+  /**
+   * Legacy method - Load all projects (untuk backward compatibility)
+   * Internally menggunakan pagination dan auto-load semua pages
+   * @deprecated Use getPage() untuk better performance
+   */
   getAll: async (userId: string): Promise<AvatarProject[]> => {
     if (!userId) throw new Error('User ID is required');
 
-    const { data } = await avatarApiClient.get<ApiAvatarProject[]>(PROJECT_ENDPOINT, {
-      params: { user_id: userId }
-    });
+    const allProjects: AvatarProject[] = [];
+    let cursor: string | null = null;
+    let hasMore = true;
 
-    return Array.isArray(data) ? data.map(mapToDomain) : [];
+    // Auto-load all pages
+    while (hasMore) {
+      const page = await avatarProjectService.getPage(userId, { cursor, limit: 50 });
+      allProjects.push(...page.items);
+      cursor = page.next_cursor;
+      hasMore = page.has_more;
+    }
+
+    return allProjects;
   },
 
   getById: async (id: string): Promise<AvatarProject> => {
@@ -53,7 +98,11 @@ export const avatarProjectService = {
     return mapToDomain(data);
   },
 
-  getStatus: async (id: string): Promise<Pick<AvatarProject, 'status' | 'progress' | 'videoUrl' | 'hasError' | 'errorMessage'>> => {
+  /**
+   * Get project status dengan pipeline support
+   * Digunakan untuk polling progress
+   */
+  getStatus: async (id: string): Promise<Pick<AvatarProject, 'status' | 'progress' | 'videoUrl' | 'hasError' | 'errorMessage' | 'currentStage' | 'pipeline'>> => {
     const { data } = await avatarApiClient.get<ApiAvatarStatusResponse>(`${PROJECT_ENDPOINT}${id}/status`);
 
     return {
@@ -61,7 +110,11 @@ export const avatarProjectService = {
       progress: data.progress,
       videoUrl: data.video_url || undefined,
       hasError: data.status === 'failed',
-      errorMessage: data.error_message || undefined
+      errorMessage: data.error_message || undefined,
+
+      // Pipeline Support
+      currentStage: data.current_stage || undefined,
+      pipeline: data.pipeline || undefined
     };
   },
 

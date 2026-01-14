@@ -1,7 +1,9 @@
 import { avatarApiClient } from '@/lib/apiClient';
+import { PaginatedResponse, PaginationParams } from '../../types/api/pagination';
 import { KokoroGenerateRequest, KokoroGenerateResponse, KokoroVoice } from '../../types/domain/kokoro';
 
 const KOKORO_BASE = '/tts';
+const DEFAULT_PAGE_LIMIT = 50;
 
 let voicesCache: KokoroVoice[] | null = null;
 let languagesCache: any[] | null = null;
@@ -54,11 +56,30 @@ export const kokoroService = {
         return data;
     },
 
-    getProjects: async (userId: string): Promise<KokoroGenerateResponse[]> => {
-        const { data } = await avatarApiClient.get<KokoroGenerateResponse[]>(`${KOKORO_BASE}/`, {
-            params: { user_id: userId }
+    getPage: async (userId: string, params?: PaginationParams): Promise<PaginatedResponse<KokoroGenerateResponse>> => {
+        const { data } = await avatarApiClient.get<PaginatedResponse<KokoroGenerateResponse>>(`${KOKORO_BASE}/`, {
+            params: {
+                user_id: userId,
+                limit: params?.limit || DEFAULT_PAGE_LIMIT,
+                ...(params?.cursor && { cursor: params.cursor })
+            }
         });
         return data;
+    },
+
+    getProjects: async (userId: string): Promise<KokoroGenerateResponse[]> => {
+        const allProjects: KokoroGenerateResponse[] = [];
+        let cursor: string | null = null;
+        let hasMore = true;
+
+        while (hasMore) {
+            const page = await kokoroService.getPage(userId, { cursor, limit: DEFAULT_PAGE_LIMIT });
+            allProjects.push(...page.items);
+            cursor = page.next_cursor;
+            hasMore = page.has_more;
+        }
+
+        return allProjects;
     },
 
     deleteProject: async (ttsId: string): Promise<void> => {
