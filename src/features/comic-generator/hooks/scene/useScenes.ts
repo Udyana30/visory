@@ -11,8 +11,7 @@ import {
   getShotAngleValue,
   getLightingValue,
   getMoodValue,
-  getCompositionValue,
-  parseCharacterMentions
+  getCompositionValue
 } from '../../utils/sceneUtils';
 
 export const useScenes = (projectId: number | null) => {
@@ -41,6 +40,7 @@ export const useScenes = (projectId: number | null) => {
       const response = await sceneService.getAll(projectId);
 
       // Filter out custom scenes (prompt === 'Custom Scene')
+      // Custom scenes are only for Image Library in Comic Editor, not for Scene Visualization
       const mappedScenes = response
         .filter(scene => scene.prompt !== 'Custom Scene')
         .map(mapToDomain);
@@ -68,81 +68,73 @@ export const useScenes = (projectId: number | null) => {
   };
 
   const updateLocalScene = (index: number, field: keyof SceneVisualization, value: any) => {
-    setScenes(prev => prev.map((s, i) => i === index ? { ...s, [field]: value } : s));
-  };
-
-  const removeScene = async (index: number) => {
-    const scene = scenes[index];
-    if (!scene.id.startsWith('temp_')) {
-      try {
-        await sceneService.delete(parseInt(scene.id));
-      } catch (err: any) {
-        setError(err.message || 'Failed to delete scene');
-        return;
-      }
-    }
     setScenes(prev => {
-      const newScenes = prev.filter((_, i) => i !== index);
-      if (newScenes.length === 0) {
-        return [{
-          id: `temp_${Date.now()}`,
-          ...DEFAULT_SCENE_DATA
-        }];
-      }
-      return newScenes;
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
     });
   };
 
-  const generateScene = async (index: number, references: Reference[]) => {
-    const scene = scenes[index];
-    if (!projectId || !scene.prompt) return;
-
-    setGeneratingIds(prev => new Set(prev).add(scene.id));
-    setError(null);
-
-    const standardIds: number[] = [];
-    const customIds: number[] = [];
-
-    scene.characters.forEach(refId => {
-      const ref = references.find(r => r.id === refId);
-      if (!ref) return;
-
-      if (ref.source === 'upload') {
-        customIds.push(parseInt(ref.id));
-      } else {
-        standardIds.push(parseInt(ref.id));
-      }
-    });
-
-    const payload = {
-      project_id: projectId,
-      prompt: parseCharacterMentions(scene.prompt, scene.characters, references),
-      negative_prompt: scene.negativePrompt || '',
-      aspect_ratio: getAspectRatioValue(scene.aspectRatio),
-      shot_type: getShotTypeValue(scene.shotType),
-      shot_size: getShotSizeValue(scene.shotSize),
-      shot_angle: getShotAngleValue(scene.shotAngle),
-      lighting: getLightingValue(scene.lighting),
-      mood: getMoodValue(scene.mood),
-      composition: getCompositionValue(scene.composition),
-      character_ids: standardIds.length > 0 ? standardIds : undefined,
-      custom_ids: customIds.length > 0 ? customIds : undefined
-    };
+  const deleteScene = useCallback(async (sceneId: string) => {
+    if (!projectId || sceneId.startsWith('temp_')) {
+      setScenes(prev => prev.filter(s => s.id !== sceneId));
+      return;
+    }
 
     try {
-      let response: SceneResponse;
-      if (scene.id.startsWith('temp_')) {
-        response = await sceneService.create(payload);
-      } else {
-        response = await sceneService.update(parseInt(scene.id), payload);
-      }
+      await sceneService.delete(Number(sceneId));
+      setScenes(prev => prev.filter(s => s.id !== sceneId));
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete scene');
+    }
+  }, [projectId]);
+
+  const generateScene = useCallback(async (index: number, references: Reference[]) => {
+    if (!projectId) return;
+
+    const scene = scenes[index];
+    if (!scene) return;
+
+    const isNewScene = scene.id.startsWith('temp_');
+    setGeneratingIds(prev => new Set(prev).add(scene.id));
+
+    try {
+      const characterIds = references.map(ref => Number(ref.id));
+
+      const sceneData = {
+        project_id: projectId,
+        prompt: scene.prompt,
+        aspect_ratio: getAspectRatioValue(scene.aspectRatio),
+        shot_type: getShotTypeValue(scene.shotType),
+        shot_size: getShotSizeValue(scene.shotSize),
+        shot_angle: getShotAngleValue(scene.shotAngle),
+        lighting: getLightingValue(scene.lighting),
+        mood: getMoodValue(scene.mood),
+        composition: getCompositionValue(scene.composition),
+        character_ids: characterIds.length > 0 ? characterIds : null,
+        custom_ids: null,
+        background_id: null,
+        negative_prompt: scene.negativePrompt || ''
+      };
+
+      console.log('🚀 Scene Generation Payload:', JSON.stringify(sceneData, null, 2));
+
+      const response = isNewScene
+        ? await sceneService.create(sceneData)
+        : await sceneService.update(Number(scene.id), sceneData);
+
+      console.log('✅ Scene Generation Response:', response);
 
       const updatedScene = mapToDomain(response);
-      updatedScene.characters = scene.characters;
 
-      setScenes(prev => prev.map((s, i) => i === index ? updatedScene : s));
-
+      setScenes(prev => {
+        const updated = [...prev];
+        updated[index] = updatedScene;
+        return updated;
+      });
     } catch (err: any) {
+      console.error('❌ Scene Generation Error:', err);
+      console.error('Error response:', err.response?.data);
       setError(err.message || 'Failed to generate scene');
     } finally {
       setGeneratingIds(prev => {
@@ -151,7 +143,7 @@ export const useScenes = (projectId: number | null) => {
         return next;
       });
     }
-  };
+  }, [projectId, scenes]);
 
   return {
     scenes,
@@ -160,7 +152,7 @@ export const useScenes = (projectId: number | null) => {
     fetchScenes,
     addScene,
     updateLocalScene,
-    removeScene,
+    removeScene: deleteScene,
     generateScene
   };
 };

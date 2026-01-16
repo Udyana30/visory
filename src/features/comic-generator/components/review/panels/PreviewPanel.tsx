@@ -5,9 +5,14 @@ import { ComicPage } from '@/features/comic-generator/types/domain/editor';
 interface PreviewPanelProps {
   pages: ComicPage[];
   previews: Record<string, string>;
+  selectedThumbnailPageId?: number | null;
 }
 
-export const PreviewPanel: React.FC<PreviewPanelProps> = ({ pages, previews }) => {
+export const PreviewPanel: React.FC<PreviewPanelProps> = ({
+  pages,
+  previews,
+  selectedThumbnailPageId
+}) => {
   const [zoom, setZoom] = useState(1);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
@@ -45,15 +50,25 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ pages, previews }) =
             const hasError = imageErrors.has(page.id);
 
             return (
-              <div 
-                key={page.id} 
-                className="bg-white shadow-lg transition-transform origin-top duration-200"
+              <div
+                key={page.id}
+                className="bg-white shadow-lg transition-transform origin-top duration-200 relative"
                 style={{ transform: `scale(${zoom})` }}
               >
+                {/* Thumbnail Badge */}
+                {selectedThumbnailPageId === Number(page.id) && (
+                  <div className="absolute top-3 right-3 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg z-10 flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
+                    </svg>
+                    Thumbnail
+                  </div>
+                )}
+
                 {url && !hasError ? (
-                  <img 
-                    src={url} 
-                    alt={`Page ${index + 1}`} 
+                  <img
+                    src={url}
+                    alt={`Page ${index + 1}`}
                     className="w-full h-auto block select-none"
                     onError={() => setImageErrors(prev => new Set(prev).add(page.id))}
                   />
@@ -69,7 +84,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ pages, previews }) =
                     </p>
                   </div>
                 )}
-                
+
                 <div className="border-t border-gray-100 p-3 flex justify-between items-center text-xs font-mono text-gray-400 bg-white">
                   <span className="font-semibold text-gray-600">Page {page.pageNumber}</span>
                   <span className="uppercase bg-gray-100 px-2 py-0.5 rounded">

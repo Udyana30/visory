@@ -20,10 +20,14 @@ export interface ProjectFormData {
 export interface Project {
   id: string;
   name: string;
-  genre?: string;
-  language?: string;
-  description?: string;
+  genre: string;
+  language: string;
+  description: string;
   artStyle: string;
   pageSize: PageSizeDTO;
+  isPublic: boolean;
+  exportedUrl: string | null;
+  viewCount: number;
   createdAt: Date;
+  updatedAt: Date;
 }

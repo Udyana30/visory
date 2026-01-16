@@ -2,7 +2,7 @@
 
 import { Plus } from 'lucide-react';
 
-const filters = ['All', 'Videos', 'Images', 'TTS', 'STT', 'Comic'];
+const filters = ['All','Avatar', 'Comic', 'TTS', 'STT'];
 
 interface Props {
   activeFilter: string;

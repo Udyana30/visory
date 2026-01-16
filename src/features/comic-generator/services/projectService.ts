@@ -1,8 +1,9 @@
 import apiClient from '@/lib/apiClient';
-import { 
-  CreateProjectRequest, 
-  ProjectResponse, 
-  ComicListResponse 
+import {
+  CreateProjectRequest,
+  UpdateProjectRequest,
+  ProjectResponse,
+  ComicListResponse
 } from '../types/api/project';
 import { PaginationParams } from '../../../types/common';
 
@@ -24,8 +25,16 @@ export const projectService = {
     return response.data;
   },
 
-  update: async (id: number, data: Partial<CreateProjectRequest>): Promise<ProjectResponse> => {
+  update: async (id: number, data: UpdateProjectRequest): Promise<ProjectResponse> => {
     const response = await apiClient.put<ProjectResponse>(`/service/comic/projects/${id}`, data);
+    return response.data;
+  },
+
+  // Set project as public (for gallery display)
+  setPublic: async (id: number, isPublic: boolean): Promise<ProjectResponse> => {
+    const response = await apiClient.put<ProjectResponse>(`/service/comic/projects/${id}`, {
+      is_public: isPublic
+    });
     return response.data;
   },
 

@@ -60,31 +60,23 @@ export const getMoodValue = (label: string) => moodMap[label] || 'auto';
 export const getCompositionValue = (label: string) => compositionMap[label] || 'auto';
 
 export const getMentionLabel = (reference: Reference): string => {
-  if (reference.isCustom) {
-    return `custom-${reference.id}`;
-  }
   return reference.name.replace(/\s+/g, '_');
 };
 
 export const parseCharacterMentions = (
-  prompt: string, 
+  prompt: string,
   referenceIds: string[],
   allReferences: Reference[]
 ): string => {
   let formattedPrompt = prompt;
-  
+
   allReferences.forEach(ref => {
     if (referenceIds.includes(ref.id)) {
       const label = getMentionLabel(ref);
       const mentionPattern = new RegExp(`@${label}\\b`, 'g');
-      
-      if (ref.isCustom) {
-        formattedPrompt = formattedPrompt.replace(mentionPattern, `@custom<${ref.id}>`);
-      } else {
-        formattedPrompt = formattedPrompt.replace(mentionPattern, `@char<${ref.id}>`);
-      }
+      formattedPrompt = formattedPrompt.replace(mentionPattern, `@char<${ref.id}>`);
     }
   });
-  
+
   return formattedPrompt;
 };

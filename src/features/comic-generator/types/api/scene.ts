@@ -19,8 +19,8 @@ export interface GenerationHistoryItem {
 
 export interface CreateSceneRequest {
   project_id: number;
-  character_ids?: number[];
-  custom_ids?: number[];
+  character_ids?: number[] | null;
+  custom_ids?: number[] | null;
   background_id?: number | null;
   aspect_ratio: string;
   shot_type: string;
@@ -53,6 +53,21 @@ export interface SceneResponse {
   updated_at: string;
 }
 
+// Paginated response type
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
 export interface SceneListResponse {
+  data: SceneResponse[];
+  meta: PaginationMeta;
+}
+
+export interface SceneListResponseLegacy {
   scenes: SceneResponse[];
 }
