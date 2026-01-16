@@ -16,22 +16,23 @@ const initialState: EditorState = {
   isSaveSuccess: false,
   suppressFeedback: false,
   lastSaved: null,
-  touchedPageIds: new Set()
+  touchedPageIds: new Set(),
+  projectId: null
 };
 
 const editorReducer = (state: EditorState, action: EditorAction | { type: 'UPDATE_PAGE_PREVIEWS', payload: Record<string, string> }): EditorState => {
   switch (action.type) {
     case 'INIT_PAGES':
       return { ...state, pages: action.payload, history: { past: [], future: [] }, touchedPageIds: new Set() };
-      
+
     case 'SET_ACTIVE_PAGE':
       return { ...state, activePageIndex: action.payload, selectedElementId: null };
-      
+
     case 'ADD_PAGE': {
       const newPage = action.payload;
       const newTouched = new Set(state.touchedPageIds);
       newTouched.add(newPage.id);
-      
+
       return {
         ...state,
         pages: [...state.pages, newPage],
@@ -45,15 +46,15 @@ const editorReducer = (state: EditorState, action: EditorAction | { type: 'UPDAT
       const pageIndex = action.payload;
       const pageToDelete = state.pages[pageIndex];
       const newPages = state.pages.filter((_, idx) => idx !== pageIndex);
-      
-      const reindexedPages = newPages.map((page, index) => ({ 
-        ...page, 
-        pageNumber: index + 1 
+
+      const reindexedPages = newPages.map((page, index) => ({
+        ...page,
+        pageNumber: index + 1
       }));
 
       const newTouched = new Set(state.touchedPageIds);
       if (pageToDelete) newTouched.delete(pageToDelete.id);
-      
+
       reindexedPages.forEach(page => newTouched.add(page.id));
 
       return {
@@ -71,21 +72,21 @@ const editorReducer = (state: EditorState, action: EditorAction | { type: 'UPDAT
       const [movedPage] = newPages.splice(oldIndex, 1);
       newPages.splice(newIndex, 0, movedPage);
       const reindexedPages = newPages.map((page, index) => ({ ...page, pageNumber: index + 1 }));
-      
+
       let newActiveIndex = state.activePageIndex;
       if (state.activePageIndex === oldIndex) newActiveIndex = newIndex;
       else if (state.activePageIndex > oldIndex && state.activePageIndex <= newIndex) newActiveIndex -= 1;
       else if (state.activePageIndex < oldIndex && state.activePageIndex >= newIndex) newActiveIndex += 1;
-      
+
       const newTouched = new Set(state.touchedPageIds);
       reindexedPages.forEach(p => newTouched.add(p.id));
 
-      return { 
-        ...state, 
-        pages: reindexedPages, 
-        activePageIndex: newActiveIndex, 
-        history: { past: [...state.history.past, state.pages], future: [] }, 
-        touchedPageIds: newTouched 
+      return {
+        ...state,
+        pages: reindexedPages,
+        activePageIndex: newActiveIndex,
+        history: { past: [...state.history.past, state.pages], future: [] },
+        touchedPageIds: newTouched
       };
     }
 
@@ -96,15 +97,15 @@ const editorReducer = (state: EditorState, action: EditorAction | { type: 'UPDAT
         const newElements = [...action.payload.newPanels, ...bubbles];
         return { ...p, layout: action.payload.layout, elements: newElements, isDirty: true };
       });
-      
+
       const newTouched = new Set(state.touchedPageIds);
       newTouched.add(state.pages[action.payload.pageIndex].id);
-      
-      return { 
-        ...state, 
-        pages: newPages, 
-        history: { past: [...state.history.past, state.pages], future: [] }, 
-        touchedPageIds: newTouched 
+
+      return {
+        ...state,
+        pages: newPages,
+        history: { past: [...state.history.past, state.pages], future: [] },
+        touchedPageIds: newTouched
       };
     }
 
@@ -116,17 +117,17 @@ const editorReducer = (state: EditorState, action: EditorAction | { type: 'UPDAT
       page.elements = [...page.elements, action.payload];
       page.isDirty = true;
       newPages[state.activePageIndex] = page;
-      
+
       const newTouched = new Set(state.touchedPageIds);
       newTouched.add(page.id);
 
-      return { 
-        ...state, 
-        pages: newPages, 
-        selectedElementId: action.payload.id, 
-        activeTool: 'select', 
-        history: { past: [...state.history.past, state.pages], future: [] }, 
-        touchedPageIds: newTouched 
+      return {
+        ...state,
+        pages: newPages,
+        selectedElementId: action.payload.id,
+        activeTool: 'select',
+        history: { past: [...state.history.past, state.pages], future: [] },
+        touchedPageIds: newTouched
       };
     }
 
@@ -142,22 +143,22 @@ const editorReducer = (state: EditorState, action: EditorAction | { type: 'UPDAT
             if (isGeometryChange) shouldForceCustom = true;
           }
           if (el.type === 'bubble' && 'style' in action.payload.changes) {
-             const changes = action.payload.changes as Partial<SpeechBubble>;
-             return { ...el, ...changes, style: { ...(el as SpeechBubble).style, ...changes.style } };
+            const changes = action.payload.changes as Partial<SpeechBubble>;
+            return { ...el, ...changes, style: { ...(el as SpeechBubble).style, ...changes.style } };
           }
           return { ...el, ...action.payload.changes };
         });
         return { ...page, elements, layout: shouldForceCustom ? 'custom' : page.layout, isDirty: true };
       });
-      
+
       const newTouched = new Set(state.touchedPageIds);
       newTouched.add(state.pages[state.activePageIndex].id);
 
-      return { 
-        ...state, 
-        pages: newPages as ComicPage[], 
-        history: { past: [...state.history.past, state.pages], future: [] }, 
-        touchedPageIds: newTouched 
+      return {
+        ...state,
+        pages: newPages as ComicPage[],
+        history: { past: [...state.history.past, state.pages], future: [] },
+        touchedPageIds: newTouched
       };
     }
 
@@ -166,23 +167,23 @@ const editorReducer = (state: EditorState, action: EditorAction | { type: 'UPDAT
         if (idx !== state.activePageIndex) return page;
         const elementToDelete = page.elements.find(el => el.id === action.payload);
         const isPanel = elementToDelete?.type === 'panel';
-        return { 
-          ...page, 
-          elements: page.elements.filter(el => el.id !== action.payload), 
-          layout: isPanel ? 'custom' : page.layout, 
-          isDirty: true 
+        return {
+          ...page,
+          elements: page.elements.filter(el => el.id !== action.payload),
+          layout: isPanel ? 'custom' : page.layout,
+          isDirty: true
         };
       });
 
       const newTouched = new Set(state.touchedPageIds);
       newTouched.add(state.pages[state.activePageIndex].id);
 
-      return { 
-        ...state, 
-        pages: newPages, 
-        selectedElementId: null, 
-        history: { past: [...state.history.past, state.pages], future: [] }, 
-        touchedPageIds: newTouched 
+      return {
+        ...state,
+        pages: newPages,
+        selectedElementId: null,
+        history: { past: [...state.history.past, state.pages], future: [] },
+        touchedPageIds: newTouched
       };
     }
 
@@ -205,40 +206,43 @@ const editorReducer = (state: EditorState, action: EditorAction | { type: 'UPDAT
       return { ...state, pages: newPages, lastSaved: new Date() };
     }
 
+    case 'RESET_STATE': return { ...initialState };
+
     case 'SET_TOOL': return { ...state, activeTool: action.payload, selectedElementId: null };
     case 'SELECT_ELEMENT': return { ...state, selectedElementId: action.payload };
     case 'SET_ZOOM': return { ...state, zoom: action.payload };
-    
+
     case 'UNDO': {
-        if (state.history.past.length === 0) return state;
-        const previous = state.history.past[state.history.past.length - 1];
-        const newTouched = new Set(state.touchedPageIds); 
-        previous.forEach(p => newTouched.add(p.id)); 
-        return { 
-          ...state, 
-          pages: previous, 
-          history: { past: state.history.past.slice(0, -1), future: [state.pages, ...state.history.future] }, 
-          touchedPageIds: newTouched 
-        };
+      if (state.history.past.length === 0) return state;
+      const previous = state.history.past[state.history.past.length - 1];
+      const newTouched = new Set(state.touchedPageIds);
+      previous.forEach(p => newTouched.add(p.id));
+      return {
+        ...state,
+        pages: previous,
+        history: { past: state.history.past.slice(0, -1), future: [state.pages, ...state.history.future] },
+        touchedPageIds: newTouched
+      };
     }
-    
+
     case 'REDO': {
-        if (state.history.future.length === 0) return state;
-        const next = state.history.future[0];
-        const newTouched = new Set(state.touchedPageIds); 
-        next.forEach(p => newTouched.add(p.id));
-        return { 
-          ...state, 
-          pages: next, 
-          history: { past: [...state.history.past, state.pages], future: state.history.future.slice(1) }, 
-          touchedPageIds: newTouched 
-        };
+      if (state.history.future.length === 0) return state;
+      const next = state.history.future[0];
+      const newTouched = new Set(state.touchedPageIds);
+      next.forEach(p => newTouched.add(p.id));
+      return {
+        ...state,
+        pages: next,
+        history: { past: [...state.history.past, state.pages], future: state.history.future.slice(1) },
+        touchedPageIds: newTouched
+      };
     }
-    
+
     case 'SET_SAVING': return { ...state, isSaving: action.payload };
     case 'SET_AUTO_SAVING': return { ...state, isAutoSaving: action.payload };
     case 'SET_SAVE_SUCCESS': return { ...state, isSaveSuccess: action.payload };
     case 'SET_SUPPRESS_FEEDBACK': return { ...state, suppressFeedback: action.payload };
+    case 'SET_PROJECT_ID': return { ...state, projectId: action.payload };
 
     default: return state;
   }
@@ -261,6 +265,7 @@ interface EditorContextType {
     updatePageLayout: (layout: PageLayout) => void;
     markPreviewsGenerated: () => void;
     updatePagePreviews: (previews: Record<string, string>) => void;
+    resetState: () => void;
   };
 }
 
@@ -274,6 +279,16 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const actions = useMemo(() => ({
     loadProject: async (projectId: number) => {
+      const currentState = stateRef.current;
+
+      // Persistence check: If we are loading the same project and have data, do nothing.
+      if (currentState.projectId === projectId && currentState.pages.length > 0) {
+        return;
+      }
+
+      dispatch({ type: 'RESET_STATE' });
+      dispatch({ type: 'SET_PROJECT_ID', payload: projectId });
+
       try {
         const pages = await editorService.getPages(projectId);
         if (pages.length === 0) {
@@ -305,7 +320,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         dispatch({ type: 'MARK_CLEAN', payload: pageIndex });
         dispatch({ type: 'SET_SAVING', payload: false });
-        
+
         if (!options?.silent) {
           dispatch({ type: 'SET_SAVE_SUCCESS', payload: true });
           setTimeout(() => dispatch({ type: 'SET_SAVE_SUCCESS', payload: false }), 1500);
@@ -338,7 +353,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     saveAllChanges: async (projectId: number) => {
       const currentState = stateRef.current;
       const dirtyPages = currentState.pages.filter(p => p.isDirty);
-      
+
       dispatch({ type: 'SET_SAVING', payload: true });
 
       try {
@@ -353,7 +368,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
         promises.push(editorService.updatePageOrder(projectId, currentState.pages));
         await Promise.all(promises);
-        
+
         dispatch({ type: 'SET_SAVE_SUCCESS', payload: true });
         setTimeout(() => dispatch({ type: 'SET_SAVE_SUCCESS', payload: false }), 1500);
       } catch (error) {
@@ -361,10 +376,6 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       } finally {
         dispatch({ type: 'SET_SAVING', payload: false });
       }
-    },
-
-    updatePagePreviews: (previews: Record<string, string>) => {
-      dispatch({ type: 'UPDATE_PAGE_PREVIEWS', payload: previews });
     },
 
     createPage: async (projectId: number) => {
@@ -375,7 +386,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const apiPage = await editorService.createPage(projectId, { page_number: nextPageNum });
         let newPage: ComicPage = apiPage;
         if (!apiPage.elements || apiPage.elements.length === 0) {
-           newPage = { ...apiPage, layout: 'single', elements: generatePanelsFromLayout('single') };
+          newPage = { ...apiPage, layout: 'single', elements: generatePanelsFromLayout('single') };
         }
         dispatch({ type: 'ADD_PAGE', payload: newPage });
       } catch (error) {
@@ -389,7 +400,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const currentState = stateRef.current;
       const page = currentState.pages[pageIndex];
       if (!page) return;
-      
+
       dispatch({ type: 'SET_SAVING', payload: true });
       try {
         if (!isNaN(Number(page.id))) await editorService.deletePage(projectId, page.id);
@@ -450,7 +461,16 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     markPreviewsGenerated: () => {
       dispatch({ type: 'MARK_PREVIEWS_GENERATED' });
+    },
+
+    updatePagePreviews: (previews: Record<string, string>) => {
+      dispatch({ type: 'UPDATE_PAGE_PREVIEWS', payload: previews });
+    },
+
+    resetState: () => {
+      dispatch({ type: 'RESET_STATE' });
     }
+
   }), []);
 
   return (

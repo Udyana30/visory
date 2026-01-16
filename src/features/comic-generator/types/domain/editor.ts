@@ -36,7 +36,7 @@ export interface BubbleStyle {
   borderWidth: number;
   showTail: boolean;
   type?: BubbleType;
-  variant?: BubbleType; 
+  variant?: BubbleType;
 }
 
 export interface SpeechBubble extends EditorElement {
@@ -80,6 +80,7 @@ export interface EditorState {
   suppressFeedback: boolean;
   lastSaved: Date | null;
   touchedPageIds: Set<string>;
+  projectId: number | null;
 }
 
 export type EditorAction =
@@ -102,4 +103,6 @@ export type EditorAction =
   | { type: 'SET_SAVE_SUCCESS'; payload: boolean }
   | { type: 'SET_SUPPRESS_FEEDBACK'; payload: boolean }
   | { type: 'MARK_CLEAN'; payload: number }
-  | { type: 'MARK_PREVIEWS_GENERATED' };
+  | { type: 'MARK_PREVIEWS_GENERATED' }
+  | { type: 'SET_PROJECT_ID'; payload: number | null }
+  | { type: 'RESET_STATE' };

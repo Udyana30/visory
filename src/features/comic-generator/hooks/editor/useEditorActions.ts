@@ -15,7 +15,7 @@ export const useEditorActions = () => {
   }, [dispatch]);
 
   const zoomIn = useCallback(() => {
-    const currentZoom = state.zoom; 
+    const currentZoom = state.zoom;
     const clampedZoom = Math.max(0.1, Math.min(3, currentZoom + 0.1));
     dispatch({ type: 'SET_ZOOM', payload: clampedZoom });
   }, [state.zoom, dispatch]);
@@ -65,7 +65,7 @@ export const useEditorActions = () => {
     suppressFeedback: state.suppressFeedback,
     selectedElementId: state.selectedElementId,
     touchedPageIds: state.touchedPageIds,
-    
+
     setTool,
     setZoom,
     zoomIn,
@@ -76,7 +76,7 @@ export const useEditorActions = () => {
     updateElement,
     selectElement,
     setActivePage,
-    
+
     manualSavePage: actions.manualSavePage,
     autoSavePage: actions.autoSavePage,
     saveAllChanges: actions.saveAllChanges,
@@ -88,7 +88,8 @@ export const useEditorActions = () => {
     updatePageLayout: actions.updatePageLayout,
     reorderPages: actions.reorderPages,
     savePageOrder: actions.savePageOrder,
-    markPreviewsGenerated: actions.markPreviewsGenerated
+    markPreviewsGenerated: actions.markPreviewsGenerated,
+    resetState: actions.resetState
   }), [
     state.activeTool,
     state.zoom,

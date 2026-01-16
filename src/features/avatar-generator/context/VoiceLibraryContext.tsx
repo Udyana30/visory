@@ -42,7 +42,6 @@ export const VoiceLibraryProvider: React.FC<{ children: React.ReactNode }> = ({ 
             return;
         }
         if (isFetchingRef.current) return;
-        if (!reset && !hasMore) return;
 
         isFetchingRef.current = true;
 
@@ -55,36 +54,13 @@ export const VoiceLibraryProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setError(null);
 
         try {
-            const currentOffset = reset ? 0 : offsetRef.current;
-            console.log(`[VoiceLibrary] Fetching voices. Offset: ${currentOffset}, Limit: ${LIMIT}`);
+            console.log(`[VoiceLibrary] Fetching voices (auto-load all pages)`);
 
-            const data = await chatterboxService.getVoices(userId, true, LIMIT, currentOffset);
-            console.log(`[VoiceLibrary] Received ${data.length} items`);
+            const data = await chatterboxService.getVoices(userId, true);
+            console.log(`[VoiceLibrary] Received ${data.length} total items`);
 
-            if (data.length < LIMIT) {
-                setHasMore(false);
-            } else {
-                setHasMore(true);
-            }
-
-            setVoices(prev => {
-                const currentVoices = reset ? [] : prev;
-                const existingIds = new Set(currentVoices.map(v => v.voice_sample_id));
-                const uniqueNewVoices = data.filter(v => !existingIds.has(v.voice_sample_id));
-
-                console.log(`[VoiceLibrary] Unique new items: ${uniqueNewVoices.length}`);
-
-                // If we got data but all were duplicates, and we're not resetting, stop pagination
-                if (!reset && data.length > 0 && uniqueNewVoices.length === 0) {
-                    console.warn("[VoiceLibrary] Server returned only duplicates. This usually means the server ignores 'offset'. Stopping pagination.");
-                    setHasMore(false);
-                    return currentVoices;
-                }
-
-                return [...currentVoices, ...uniqueNewVoices];
-            });
-
-            offsetRef.current = currentOffset + data.length;
+            setVoices(data);
+            setHasMore(false);
 
         } catch (err: any) {
             console.error("Fetch voices error:", {
@@ -98,7 +74,7 @@ export const VoiceLibraryProvider: React.FC<{ children: React.ReactNode }> = ({ 
             setIsFetchingMore(false);
             isFetchingRef.current = false;
         }
-    }, [userId, hasMore]);
+    }, [userId]);
 
     const uploadVoice = async (file: File, name: string, description?: string, isPublic: boolean = false) => {
         if (!userId) throw new Error("User ID required");

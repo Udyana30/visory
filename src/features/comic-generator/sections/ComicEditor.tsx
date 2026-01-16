@@ -28,22 +28,23 @@ const ComicEditorContent: React.FC<ComicEditorProps> = ({
   onNext,
   onPageModified
 }) => {
-  const { 
-    loadProject, 
-    manualSavePage, 
+  const {
+    loadProject,
+    manualSavePage,
     saveAllChanges,
-    isSaving, 
+    isSaving,
     isAutoSaving,
     isSaveSuccess,
     suppressFeedback,
     pages,
     activePageIndex,
-    setZoom 
+    setZoom,
+    resetState
   } = useEditorActions();
 
   const { state } = useEditor();
   const isDirty = state.pages.some(p => p.isDirty);
-  
+
   const isLoadedRef = useRef(false);
   const currentProjectIdRef = useRef<number | null>(null);
 
@@ -53,15 +54,16 @@ const ComicEditorContent: React.FC<ComicEditorProps> = ({
   );
 
   useEffect(() => {
-    if (projectId && (!isLoadedRef.current || currentProjectIdRef.current !== projectId)) {
-      if (pages.length === 0) {
-        loadProject(projectId);
-      }
-      isLoadedRef.current = true;
-      currentProjectIdRef.current = projectId;
-      setZoom(0.6); 
+    if (projectId) {
+      loadProject(projectId);
     }
-  }, [projectId, loadProject, setZoom, pages.length]);
+  }, [projectId, loadProject]);
+
+  useEffect(() => {
+    return () => {
+      // No-op for now to persist state
+    };
+  }, []);
 
   useEffect(() => {
     const currentPage = pages[activePageIndex];
@@ -89,8 +91,8 @@ const ComicEditorContent: React.FC<ComicEditorProps> = ({
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-sm">
       <div className="shrink-0 bg-white z-20">
-        <EditorToolbar 
-          onBack={handleSafeBack} 
+        <EditorToolbar
+          onBack={handleSafeBack}
           onFinish={handleFinish}
           projectId={projectId}
         />
@@ -98,14 +100,14 @@ const ComicEditorContent: React.FC<ComicEditorProps> = ({
 
       <div className="flex-1 flex overflow-hidden">
         <div className="shrink-0 w-72 border-r border-gray-200 bg-white z-10 h-full flex flex-col">
-          <EditorSidebar 
+          <EditorSidebar
             visualizations={visualizations}
             projectId={projectId}
           />
         </div>
 
         <div className="flex-1 min-w-0 relative bg-gray-100 h-full">
-           <EditorCanvas />
+          <EditorCanvas />
         </div>
 
         <div className="shrink-0 w-80 border-l border-gray-200 bg-white z-10 h-full flex flex-col">
@@ -113,10 +115,10 @@ const ComicEditorContent: React.FC<ComicEditorProps> = ({
         </div>
       </div>
 
-      <SaveFeedback 
-        isOpen={shouldShowFeedback} 
-        mode={isAutoSaving ? 'auto' : 'manual'} 
-        isSuccess={isSaveSuccess} 
+      <SaveFeedback
+        isOpen={shouldShowFeedback}
+        mode={isAutoSaving ? 'auto' : 'manual'}
+        isSuccess={isSaveSuccess}
         customMessage={isSavingAndExiting ? "Saving all changes..." : undefined}
       />
     </div>

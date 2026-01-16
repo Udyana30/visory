@@ -6,8 +6,8 @@ import { ProcessStatus } from '../types/domain/review';
 
 interface UsePreviewGenerationReturn {
   generatePreviews: (
-    projectId: number, 
-    pages: ComicPage[], 
+    projectId: number,
+    pages: ComicPage[],
     dimensions: { width: number, height: number },
     dirtyIds: Set<string>
   ) => Promise<Record<string, string>>;
@@ -22,10 +22,10 @@ const CONCURRENCY_LIMIT = 2;
 export const usePreviewGeneration = (): UsePreviewGenerationReturn => {
   const [status, setStatus] = useState<ProcessStatus>('idle');
   const [progress, setProgress] = useState(0);
-  
+
   // Stores Blob URLs for immediate display
   const [renderedPreviews, setRenderedPreviews] = useState<Record<string, string>>({});
-  
+
   const processingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -35,19 +35,25 @@ export const usePreviewGeneration = (): UsePreviewGenerationReturn => {
       Object.values(renderedPreviews).forEach(url => {
         if (url.startsWith('blob:')) URL.revokeObjectURL(url);
       });
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
     };
-  }, []); // Empty dependency ensures cleanup only happens on unmount
+  }, []);
 
   const generatePreviews = useCallback(async (
-    projectId: number, 
-    pages: ComicPage[], 
+    projectId: number,
+    pages: ComicPage[],
     dimensions: { width: number, height: number },
     dirtyIds: Set<string>
   ): Promise<Record<string, string>> => {
-    
+
+    // Abort previous process if any
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new controller for this process
+    abortControllerRef.current = new AbortController();
+    const currentController = abortControllerRef.current;
+
     if (processingRef.current) return {};
 
     const pagesToProcess = pages.filter(p => dirtyIds.has(p.id));
@@ -57,9 +63,8 @@ export const usePreviewGeneration = (): UsePreviewGenerationReturn => {
       setProgress(0);
       return {};
     }
-    
+
     processingRef.current = true;
-    abortControllerRef.current = new AbortController();
     setStatus('loading');
     setProgress(0);
 
@@ -69,28 +74,30 @@ export const usePreviewGeneration = (): UsePreviewGenerationReturn => {
 
     try {
       for (let i = 0; i < pagesToProcess.length; i += CONCURRENCY_LIMIT) {
-        if (abortControllerRef.current.signal.aborted) {
+        if (currentController.signal.aborted) {
           throw new Error('Process aborted');
         }
 
         const chunk = pagesToProcess.slice(i, i + CONCURRENCY_LIMIT);
-        
+
         await Promise.all(chunk.map(async (page) => {
+          if (currentController.signal.aborted) return;
+
           try {
             // 1. Render to Blob (Client Side)
             const blob = await renderPageToBlob(page, dimensions.width, dimensions.height);
             const localUrl = URL.createObjectURL(blob);
-            
+
             // 2. Update local state for immediate feedback
             setRenderedPreviews(prev => ({ ...prev, [page.id]: localUrl }));
 
             // 3. Upload to Server
             const uploadedUrl = await previewService.uploadPagePreview(
-              projectId, 
-              Number(page.id), 
+              projectId,
+              Number(page.id),
               blob
             );
-            
+
             // 4. Collect Server URL
             serverUrls[page.id] = uploadedUrl;
 
@@ -108,19 +115,25 @@ export const usePreviewGeneration = (): UsePreviewGenerationReturn => {
       return serverUrls;
 
     } catch (error) {
+      if (currentController.signal.aborted) {
+        console.log('Preview generation aborted');
+        return {};
+      }
       console.error('Preview generation failed:', error);
       setStatus('error');
       return {};
     } finally {
       processingRef.current = false;
-      abortControllerRef.current = null;
+      if (abortControllerRef.current === currentController) {
+        abortControllerRef.current = null;
+      }
     }
   }, []);
 
-  return { 
-    generatePreviews, 
-    status, 
-    progress, 
+  return {
+    generatePreviews,
+    status,
+    progress,
     renderedPreviews,
     isProcessing: processingRef.current
   };
