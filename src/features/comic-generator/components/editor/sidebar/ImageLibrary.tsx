@@ -1,16 +1,18 @@
 import React from 'react';
-import { Upload, ImageIcon } from 'lucide-react';
+import { Upload, ImageIcon, Loader2 } from 'lucide-react';
 import { SceneVisualization } from '../../../types/domain/scene';
 import { DraggableAsset } from './DraggableAsset';
 
 interface ImageLibraryProps {
   visualizations: SceneVisualization[];
   onUpload: (files: FileList | null) => void;
+  uploadingIds?: Set<string>;
 }
 
-export const ImageLibrary: React.FC<ImageLibraryProps> = ({ 
-  visualizations, 
-  onUpload 
+export const ImageLibrary: React.FC<ImageLibraryProps> = ({
+  visualizations,
+  onUpload,
+  uploadingIds = new Set()
 }) => {
   const hasImages = visualizations.length > 0;
 
@@ -26,7 +28,7 @@ export const ImageLibrary: React.FC<ImageLibraryProps> = ({
             {visualizations.length}
           </span>
         </div>
-        
+
         <label className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer border border-blue-200 font-medium text-sm">
           <Upload className="w-4 h-4" />
           Upload Image
@@ -51,9 +53,21 @@ export const ImageLibrary: React.FC<ImageLibraryProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2">
-            {visualizations.map((viz) => (
-              <DraggableAsset key={viz.id} data={viz} />
-            ))}
+            {visualizations.map((viz) => {
+              const isUploading = uploadingIds.has(viz.id);
+              return (
+                <div key={viz.id} className="relative">
+                  <div className={`${isUploading ? 'opacity-50' : ''}`}>
+                    <DraggableAsset data={viz} />
+                  </div>
+                  {isUploading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg">
+                      <Loader2 className="w-6 h-6 text-white animate-spin" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

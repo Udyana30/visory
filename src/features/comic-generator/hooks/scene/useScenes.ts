@@ -39,7 +39,11 @@ export const useScenes = (projectId: number | null) => {
     if (!projectId) return;
     try {
       const response = await sceneService.getAll(projectId);
-      const mappedScenes = response.map(mapToDomain);
+
+      // Filter out custom scenes (prompt === 'Custom Scene')
+      const mappedScenes = response
+        .filter(scene => scene.prompt !== 'Custom Scene')
+        .map(mapToDomain);
 
       if (mappedScenes.length === 0) {
         const defaultScene: SceneVisualization = {

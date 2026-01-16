@@ -1,9 +1,9 @@
 import apiClient from '@/lib/apiClient';
-import { 
-  CreateSceneRequest, 
-  SceneResponse, 
+import {
+  CreateSceneRequest,
+  SceneResponse,
   SceneListResponse,
-  GenerationHistoryItem 
+  GenerationHistoryItem
 } from '../types/api/scene';
 
 export const sceneService = {
@@ -36,5 +36,31 @@ export const sceneService = {
 
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/service/comic/scenes/${id}`);
+  },
+
+  uploadCustomScene: async (projectId: number, file: File): Promise<SceneResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiClient.post<SceneResponse>(
+      `/service/comic/scenes/custom/${projectId}`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
   }
 };
+
+export const {
+  create,
+  getAll,
+  getById,
+  update,
+  getHistory,
+  delete: deleteScene,
+  uploadCustomScene
+} = sceneService;

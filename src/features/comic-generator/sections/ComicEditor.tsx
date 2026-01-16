@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { sceneService } from '@/features/comic-generator/services/sceneService';
 import { useEditorActions } from '@/features/comic-generator/hooks/editor/useEditorActions';
 import { useAutoSave } from '@/features/comic-generator/hooks/editor/useAutoSave';
 import { useEditorShortcuts } from '@/features/comic-generator/hooks/editor/useEditorShortcuts';
@@ -47,6 +48,86 @@ const ComicEditorContent: React.FC<ComicEditorProps> = ({
 
   const isLoadedRef = useRef(false);
   const currentProjectIdRef = useRef<number | null>(null);
+
+  const [customScenes, setCustomScenes] = useState<SceneVisualization[]>([]);
+  const [uploadingScenes, setUploadingScenes] = useState<Set<string>>(new Set());
+
+  const handleUpload = async (files: FileList | null) => {
+    if (!files || !projectId) {
+      console.warn('No files or projectId provided');
+      return;
+    }
+
+    console.log(`Starting upload of ${files.length} file(s) to project ${projectId}`);
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const tempId = `uploading_${Date.now()}_${i}`;
+
+        // Create temporary scene with loading state
+        const tempScene: SceneVisualization = {
+          id: tempId,
+          prompt: 'Custom Scene',
+          aspectRatio: '1:1',
+          shotType: 'auto',
+          shotSize: 'auto',
+          shotAngle: 'auto',
+          lighting: 'auto',
+          mood: 'auto',
+          composition: 'auto',
+          characters: [],
+          imageUrl: URL.createObjectURL(file), // Preview image
+          negativePrompt: ''
+        };
+
+        // Add to custom scenes and mark as uploading
+        setCustomScenes(prev => [...prev, tempScene]);
+        setUploadingScenes(prev => new Set(prev).add(tempId));
+
+        try {
+          console.log(`Uploading file: ${file.name}, size: ${file.size} bytes`);
+          const response = await sceneService.uploadCustomScene(projectId, file);
+          console.log('Upload successful:', response);
+
+          // Replace temp scene with actual response
+          setCustomScenes(prev => prev.map(scene =>
+            scene.id === tempId ? {
+              id: response.id.toString(),
+              prompt: response.prompt,
+              aspectRatio: response.aspect_ratio,
+              shotType: response.shot_type,
+              shotSize: response.shot_size,
+              shotAngle: response.shot_angle,
+              lighting: response.lighting,
+              mood: response.mood,
+              composition: response.composition,
+              characters: response.character_ids ? response.character_ids.map(String) : [],
+              imageUrl: response.image_url,
+              negativePrompt: response.negative_prompt
+            } : scene
+          ));
+        } catch (uploadError: any) {
+          console.error('Upload failed for file:', file.name, uploadError);
+          // Remove failed upload
+          setCustomScenes(prev => prev.filter(scene => scene.id !== tempId));
+          alert(`Failed to upload ${file.name}: ${uploadError.message || 'Unknown error'}`);
+        } finally {
+          // Remove from uploading set
+          setUploadingScenes(prev => {
+            const next = new Set(prev);
+            next.delete(tempId);
+            return next;
+          });
+          // Clean up object URL
+          URL.revokeObjectURL(tempScene.imageUrl!);
+        }
+      }
+    } catch (error: any) {
+      console.error('Upload process failed:', error);
+      alert(`Upload failed: ${error.message || 'Unknown error'}`);
+    }
+  };
 
   const { handleInterceptNavigation, isSavingAndExiting } = useUnsavedChanges(
     isDirty,
@@ -101,8 +182,10 @@ const ComicEditorContent: React.FC<ComicEditorProps> = ({
       <div className="flex-1 flex overflow-hidden">
         <div className="shrink-0 w-72 border-r border-gray-200 bg-white z-10 h-full flex flex-col">
           <EditorSidebar
-            visualizations={visualizations}
+            visualizations={[...visualizations, ...customScenes]}
             projectId={projectId}
+            onUpload={handleUpload}
+            uploadingIds={uploadingScenes}
           />
         </div>
 
