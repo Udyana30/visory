@@ -37,20 +37,20 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('generate');
   const [sceneToDelete, setSceneToDelete] = useState<number | null>(null);
 
-  const { 
-    scenes, 
-    generatingIds, 
-    fetchScenes, 
-    addScene, 
-    updateLocalScene, 
-    removeScene, 
-    generateScene 
+  const {
+    scenes,
+    generatingIds,
+    fetchScenes,
+    addScene,
+    updateLocalScene,
+    removeScene,
+    generateScene
   } = useScenes(projectId);
 
-  const { 
-    activeSceneId, 
-    activeIndex, 
-    navigateTo 
+  const {
+    activeSceneId,
+    activeIndex,
+    navigateTo
   } = useSceneNavigation(scenes);
 
   const {
@@ -67,9 +67,9 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
     }
   }, [projectId, fetchScenes]);
 
-  const activeReferences = useMemo(() => 
+  const activeReferences = useMemo(() =>
     references.filter(r => selectedReferenceIds.includes(r.id)),
-  [references, selectedReferenceIds]);
+    [references, selectedReferenceIds]);
 
   const activeScene = scenes.find(s => s.id === activeSceneId);
 
@@ -77,7 +77,7 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
     addScene();
     setTimeout(() => {
       const newIndex = scenes.length;
-      const newId = scenes[newIndex]?.id; 
+      const newId = scenes[newIndex]?.id;
       if (newId) navigateTo(newId);
     }, 0);
   };
@@ -118,7 +118,7 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-[1fr_320px] h-full bg-gray-50 gap-6">
-        
+
         <div className="h-full min-w-0 flex flex-col">
           <div className="flex-1 min-h-0">
             <SceneEditorLayout
@@ -134,9 +134,10 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
                 />
               }
               canvas={
-                <SceneCanvas 
-                  scene={activeScene} 
-                  isGenerating={activeScene ? generatingIds.has(activeScene.id) : false} 
+                <SceneCanvas
+                  scene={activeScene}
+                  isGenerating={activeScene ? generatingIds.has(activeScene.id) : false}
+                  isFirst={activeIndex === 0}
                 />
               }
               configuration={
@@ -182,20 +183,19 @@ export const SceneVisualization: React.FC<SceneVisualizationProps> = ({
         </div>
 
         <div className="space-y-4 sticky self-start">
-            <TimelineProgress
-              currentProgress={currentProgress}
-              currentTimelineStep={currentTimelineStep}
-              onStepClick={onStepClick}
-              isComicOverviewComplete={true}
-            />
+          <TimelineProgress
+            currentProgress={currentProgress}
+            currentTimelineStep={currentTimelineStep}
+            onStepClick={onStepClick}
+            isComicOverviewComplete={true}
+          />
           <button
             onClick={onNext}
             disabled={selectedReferenceIds.length === 0}
-            className={`w-full py-3 rounded-lg font-medium transition-all duration-200 ${
-              selectedReferenceIds.length > 0
+            className={`w-full py-3 rounded-lg font-medium transition-all duration-200 ${selectedReferenceIds.length > 0
                 ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
+              }`}
           >
             Start Editing Comic
           </button>

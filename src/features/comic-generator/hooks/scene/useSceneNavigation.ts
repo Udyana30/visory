@@ -5,9 +5,13 @@ export const useSceneNavigation = (scenes: SceneVisualization[]) => {
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (scenes.length > 0 && !activeSceneId) {
-      setActiveSceneId(scenes[0].id);
-    } else if (scenes.length === 0) {
+    if (scenes.length > 0) {
+      // Auto-select first scene if none selected or current selection is invalid
+      const isValidSelection = activeSceneId && scenes.some(s => s.id === activeSceneId);
+      if (!isValidSelection) {
+        setActiveSceneId(scenes[0].id);
+      }
+    } else {
       setActiveSceneId(null);
     }
   }, [scenes, activeSceneId]);

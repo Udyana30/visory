@@ -4,15 +4,15 @@ import { SceneVisualization } from '../../types/domain/scene';
 import { Reference } from '../../types/domain/reference';
 import { SceneResponse } from '../../types/api/scene';
 import { DEFAULT_SCENE_DATA } from '../../constants/scene';
-import { 
-  getAspectRatioValue, 
+import {
+  getAspectRatioValue,
   getShotTypeValue,
   getShotSizeValue,
   getShotAngleValue,
   getLightingValue,
   getMoodValue,
   getCompositionValue,
-  parseCharacterMentions 
+  parseCharacterMentions
 } from '../../utils/sceneUtils';
 
 export const useScenes = (projectId: number | null) => {
@@ -39,7 +39,17 @@ export const useScenes = (projectId: number | null) => {
     if (!projectId) return;
     try {
       const response = await sceneService.getAll(projectId);
-      setScenes(response.map(mapToDomain));
+      const mappedScenes = response.map(mapToDomain);
+
+      if (mappedScenes.length === 0) {
+        const defaultScene: SceneVisualization = {
+          id: `temp_${Date.now()}`,
+          ...DEFAULT_SCENE_DATA
+        };
+        setScenes([defaultScene]);
+      } else {
+        setScenes(mappedScenes);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch scenes');
     }
@@ -67,7 +77,16 @@ export const useScenes = (projectId: number | null) => {
         return;
       }
     }
-    setScenes(prev => prev.filter((_, i) => i !== index));
+    setScenes(prev => {
+      const newScenes = prev.filter((_, i) => i !== index);
+      if (newScenes.length === 0) {
+        return [{
+          id: `temp_${Date.now()}`,
+          ...DEFAULT_SCENE_DATA
+        }];
+      }
+      return newScenes;
+    });
   };
 
   const generateScene = async (index: number, references: Reference[]) => {
@@ -83,7 +102,7 @@ export const useScenes = (projectId: number | null) => {
     scene.characters.forEach(refId => {
       const ref = references.find(r => r.id === refId);
       if (!ref) return;
-      
+
       if (ref.source === 'upload') {
         customIds.push(parseInt(ref.id));
       } else {
@@ -113,10 +132,10 @@ export const useScenes = (projectId: number | null) => {
       } else {
         response = await sceneService.update(parseInt(scene.id), payload);
       }
-      
+
       const updatedScene = mapToDomain(response);
-      updatedScene.characters = scene.characters; 
-      
+      updatedScene.characters = scene.characters;
+
       setScenes(prev => prev.map((s, i) => i === index ? updatedScene : s));
 
     } catch (err: any) {
